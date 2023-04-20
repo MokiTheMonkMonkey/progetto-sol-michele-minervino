@@ -5,15 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #define MAX_NAME 256
 
-typedef struct searcher_var {
-
-    char * dir_name;
-    int error;
-
-}s_Var;
 
 void* _malloc (unsigned long size);
 

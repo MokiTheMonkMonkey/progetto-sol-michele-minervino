@@ -88,7 +88,7 @@ extern pthread_mutex_t mes_list_mutex;
 extern pthread_cond_t mes_list_cond;
 extern pthread_mutex_t coda_mutex;
 extern pthread_cond_t coda_cond;
-extern pthread_cond_t insert_coda_cond;
+
 
 
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins);
@@ -99,7 +99,7 @@ int worker_Fun(void* filepath);
 
 char * pop_Coda_Con();
 
-void insert_coda_con(char * nomeFile);
+int insert_coda_con(char * nomeFile);
 
 void init_coda_con();
 

@@ -1,7 +1,20 @@
-#include "./../includes/util.h"
-#include "../includes/threadsPool.h"
-#include <util.h>
-#include <threadsPool.h>
+#include <utils.h>
+
+void* _malloc (unsigned long size) {
+
+    void *elem;
+
+    if ((elem = malloc(size)) == NULL && size != 0){
+
+        perror("malloc :");
+        exit(EXIT_FAILURE);
+
+    }
+
+    return elem;
+
+}
+
 
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins){
 
@@ -22,63 +35,16 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * in
 
 }
 
+void insert_coda_con(char * nomeFile){
 
-void init_coda_con(){
-
-
-    coda_concorrente.th_number = -1;
-    coda_concorrente.delay = _malloc(sizeof(struct timespec));
-    coda_concorrente.delay -> tv_sec = -1;
-    coda_concorrente.lim = -1;
-    coda_concorrente.curr = -1;
-    coda_concorrente.coda = NULL;
-    coda_concorrente.last = NULL;
-
-}
-
-/*
- * funzione che setta allo standard tutte le statistiche che non sono state settate
- * */
-void set_standard_coda_con(){
-
-
-    LOCK( &coda_mutex )
-
-    if(coda_concorrente.th_number == -1) coda_concorrente.th_number = 4;
-    if(coda_concorrente.delay -> tv_sec == -1) {
-
-        coda_concorrente.delay -> tv_sec = 0;
-        coda_concorrente.delay -> tv_nsec = 0;
-
-    }
-    if(coda_concorrente.lim == -1) coda_concorrente.lim = 4;
-
-    is_set_coda_cond = 1;
-
-    SIGNAL ( &coda_cond )
-
-    UNLOCK( &coda_mutex )
-
-}
-
-int insert_coda_con(char * nomeFile){
-
-    if(nanosleep(coda_concorrente.delay, NULL ) == -1){
-
-        perror( "errore nella nanosleep" );
-        return -1;
-
-    }
     LOCK(&coda_mutex)
 
-
-    while(!is_set_coda_cond && coda_concorrente.curr == coda_concorrente.lim){
+    while(coda_concorrente.curr == coda_concorrente.lim){
 
         //coda troppo piena aspetto che si riempia
-        WAIT(&coda_cond,&coda_mutex)
+        WAIT(&insert_coda_cond,&coda_mutex)
 
     }
-
 
 
     if(!coda_concorrente.coda){
@@ -111,10 +77,44 @@ int insert_coda_con(char * nomeFile){
     coda_concorrente.curr++;
 
     BCAST(&coda_cond)
-
     UNLOCK(&coda_mutex)
 
-    return 0;
+}
+
+int isNumber(const char* s) {
+
+    char* e = NULL;
+    int val = (int)strtol(s, &e, 0);
+    if (e != NULL && *e == (char)0) return val;
+    return -1;
+
+}
+
+void printList (Nodo_Lista_Mes *lptr){
+
+    //funzione per il debugging stampa una lista
+    if (!lptr){
+
+        fprintf(stderr,"=================\n");
+        return;
+
+    }
+    fprintf (stderr , "%ld %s\n|\nV\n", lptr -> val , lptr -> nome);
+    printList (lptr -> next);
+
+}
+
+void printListCoda (NodoCoda *lptr){
+
+    //funzione per il debugging stampa una lista
+    if (!lptr){
+
+        fprintf(stderr , "=================\n");
+        return;
+
+    }
+    fprintf (stderr , "%d %s\n|\nV\n", lptr -> dim , lptr -> nome);
+    printListCoda (lptr -> next);
 
 }
 
@@ -165,37 +165,30 @@ char * pop_Coda_Con(){
         BCAST( &coda_cond )
 
     }
-    SIGNAL( &coda_cond )
+    SIGNAL( &insert_coda_cond )
     UNLOCK( &coda_mutex )
 
     return fileName;
 
 }
 
-int worker_Fun(void* filepath){
+
+void worker_Fun(void* filepath){
 
     //dichiaro le variabili
     char * filePath = (char*) filepath;
-
-    fprintf(stderr,"%s",filePath);
     FILE * fd = NULL;
     long int retValue = 0;
-    long lBuf = 0 ;
+    long lBuf = 0 , i = 0;
     unsigned long filePathLen = strnlen(filePath , MAX_NAME) + 1;
 
     //apro il file
-    if((fd = fopen (filePath , "r")) == NULL){
-
-        perror("fopen :");
-        return -1;
-
-    }
-
+    ec_null(fd = fopen (filePath , "r") , "thread fopen :")
 
     //calcolo il valore
-    while(fread (&lBuf , sizeof (long) ,1,fd) != 4){
+    while(fread (&lBuf , sizeof (long) ,1,fd) != 0){
 
-        retValue ++;
+        retValue += lBuf * i++;
 
     }
 
@@ -233,13 +226,10 @@ int worker_Fun(void* filepath){
     SIGNAL(&mes_list_cond)
     UNLOCK(&mes_list_mutex)
 
-    return 0;
-
 }
 
 
 void * worker(){
-
 
     char* nomeFile;
     while(1) {
@@ -251,40 +241,25 @@ void * worker(){
 
         }
 
-        if(worker_Fun(nomeFile) != 0){
-
-
-
-        }
+        worker_Fun(nomeFile);
 
 
     }
 }
 
-void printList (Nodo_Lista_Mes *lptr){
+void *genera(void *argv){
 
-    //funzione per il debugging stampa una lista
-    if (!lptr){
+    char **Argv = (char**)argv;
+    int i = 1;
+    while(Argv[i]) {
 
-        fprintf(stderr,"=================\n");
-        return;
-
-    }
-    fprintf (stderr , "%ld %s\n|\nV\n", lptr -> val , lptr -> nome);
-    printList (lptr -> next);
-
-}
-
-void printListCoda (NodoCoda *lptr){
-
-    //funzione per il debugging stampa una lista
-    if (!lptr){
-
-        fprintf(stderr , "=================\n");
-        return;
+        insert_coda_con(Argv[i]);
+        i++;
 
     }
-    fprintf (stderr , "%d %s\n|\nV\n", lptr -> dim , lptr -> nome);
-    printListCoda (lptr -> next);
+
+    insert_coda_con("quit");
+
+    return NULL;
 
 }

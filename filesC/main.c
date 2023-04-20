@@ -1,4 +1,5 @@
 #include <util.h>
+#include <threadsPool.h>
 #include "../includes/util.h"
 #include "../includes/threadsPool.h"
 #include <getopt.h>
@@ -41,6 +42,7 @@ char * valid_name(char * dirname , char * next){
 void * cerca_File_Regolari( void * dir_Name ){
 
     char * dirName = (char *) dir_Name;
+    struct stat d_stat;
     DIR * dir;
     errno = 0;
     dir = opendir(dirName);
@@ -54,7 +56,48 @@ void * cerca_File_Regolari( void * dir_Name ){
     char * file_name;
     while((errno = 0), ( info = readdir(dir)) != NULL ){
 
-        switch ( info -> d_type ){
+        if(stat(info -> d_name , &d_stat) == -1){
+
+
+            return dir_Name;
+
+        }
+        if(S_ISREG( d_stat.st_mode )){
+
+            if(!(file_name = valid_name(dirName,info -> d_name))){
+
+                perror( "nome torppo lungo" );
+                return dir_Name;
+
+            }
+            insert_coda_con( file_name );
+
+
+        }
+        else{
+
+            if(S_ISDIR( d_stat.st_mode )){
+
+                if(!(strncmp( info -> d_name , "." , 1)) || !(strncmp( info -> d_name , ".." , 2)))
+
+                    break;
+
+                if(!( file_name = valid_name( dirName , info -> d_name ) ) ){
+
+                    perror( "nome troppo lungo" );
+                    return dir_Name;
+
+                }
+                if(cerca_File_Regolari( file_name )){
+
+                    return dir_Name;
+
+                }
+
+            }
+
+        }
+        /*switch ( info -> d_type ){
 
             case DT_REG:
 
@@ -93,9 +136,39 @@ void * cerca_File_Regolari( void * dir_Name ){
 
         }
 
+        */
     }
 
     return NULL;
+
+}
+
+int ins_file_singoli( char * argv[] , int OptInd ){
+
+    struct stat c_stat;
+    int r;
+    while(argv[OptInd] != NULL){
+
+        if( (stat(argv[OptInd] , &c_stat) ) == -1 ){
+
+            perror("errore nella stat :");
+            return -1;
+
+        }
+        if(S_ISREG( c_stat.st_mode)){
+
+            insert_coda_con(argv[optind++]);
+
+        }
+        else{
+
+            return -1;
+        }
+
+
+    }
+
+    return 0;
 
 }
 
@@ -111,7 +184,7 @@ int main (int argc , char* argv[]){
 
     long delay = -1;
     int option;
-    char dCase = -1;
+    char dCase = 1;
     pthread_t searcher;
     init_coda_con();
 
@@ -145,16 +218,12 @@ int main (int argc , char* argv[]){
             case 'd':
 
                 ISSET_CODA( dCase , "inseririe solo una cartella da analizzare" )
-                dCase = 1;
+                dCase = 0;
                 size_t dirLen = strnlen(optarg,MAX_NAME) + 1;
-                s_Var * search_var = _malloc( sizeof( s_Var ) );
-                search_var -> dir_name = _malloc(dirLen);
-                search_var -> error = 0;
-                strncpy(search_var -> dir_name,optarg,dirLen);
+                char * dir_name = _malloc(dirLen);
+                strncpy(dir_name,optarg,dirLen);
 
-                NOT_ZERO( pthread_create( &searcher , NULL , cerca_File_Regolari , (void *)search_var ) , "pthread create : [searcher]" )
-
-
+                NOT_ZERO( pthread_create( &searcher , NULL , cerca_File_Regolari , (void *)dir_name ) , "pthread create : [searcher]" )
 
                 break;
 
@@ -162,13 +231,11 @@ int main (int argc , char* argv[]){
 
                 fprintf(stderr,"opzione %c non valida",option);
                 return 1;
-                break;
 
             default:
 
                 fprintf(stderr,"inserie opzione valida");
                 return 1;
-                break;
 
         }
 
@@ -182,27 +249,34 @@ int main (int argc , char* argv[]){
 
     }
 
+    //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
     set_standard_coda_con();
 
+    pthread_t * workers = _malloc(sizeof(pthread_t) * coda_concorrente.th_number);
+
+    /*
+     * faccio partire i threads prima di mettere in coda i file singoli
+     * cosi' posso far farli concorrere durante l'inserimento
+     * */
+    NOT_ZERO( pthread_create ( workers , NULL , worker , NULL ) , "errore creazione worker" )
+
+    if(ins_file_singoli(argv , optind)){
+
+       perror("non inserire file non regolari tra gli argomenti");
+       //gestione errori con free
+       return -1;
+
+    }
 
     //è stata analizzata una cartella e controllo se non ci sono stati errori
     if(dCase){
 
         if(pthread_join(searcher , NULL ) != 0){
 
+            //gestione errori con free
             return -1;
 
         }
-
-    }
-    for(int i = 0; i < threads_number ; i++){
-
-        NOT_ZERO(pthread_create (&worker_Threads[i] , NULL , worker , NULL),"pthread create:")
-
-    }
-    for(int i = 0 ; i < threads_number ; i++){
-
-        NOT_ZERO(pthread_join (worker_Threads[i] , NULL),"pthread join")
 
     }
 
