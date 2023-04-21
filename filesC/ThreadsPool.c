@@ -26,11 +26,11 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * in
 void init_coda_con(){
 
 
-    coda_concorrente.th_number = -1;
+    coda_concorrente.th_number = 0;
     coda_concorrente.delay = _malloc(sizeof(struct timespec));
-    coda_concorrente.delay -> tv_sec = -1;
-    coda_concorrente.lim = -1;
-    coda_concorrente.curr = -1;
+    coda_concorrente.delay -> tv_sec = 0;
+    coda_concorrente.lim = 0;
+    coda_concorrente.curr = 0;
     coda_concorrente.coda = NULL;
     coda_concorrente.last = NULL;
 
@@ -44,18 +44,18 @@ void set_standard_coda_con(){
 
     LOCK( &coda_mutex )
 
-    if(coda_concorrente.th_number == -1) coda_concorrente.th_number = 4;
-    if(coda_concorrente.delay -> tv_sec == -1) {
+    if(coda_concorrente.th_number == 0) coda_concorrente.th_number = 4;
+    if(coda_concorrente.delay -> tv_sec == 0) {
 
         coda_concorrente.delay -> tv_sec = 0;
         coda_concorrente.delay -> tv_nsec = 0;
 
     }
-    if(coda_concorrente.lim == -1) coda_concorrente.lim = 4;
+    if(coda_concorrente.lim == 0) coda_concorrente.lim = 8;
 
     is_set_coda_cond = 1;
 
-    SIGNAL ( &coda_cond )
+    BCAST( &coda_cond )
 
     UNLOCK( &coda_mutex )
 
@@ -125,14 +125,15 @@ char * pop_Coda_Con(){
     LOCK(&coda_mutex)
 
     //aspetto che la coda si riempia o che arrivi il messaggio di teminazione
-    while(!coda_concorrente.curr && !cond_Master){
+    while(!coda_concorrente.curr && !no_more_files){
 
+        fprintf(stderr, "we");
         WAIT(&coda_cond,&coda_mutex)
 
     }
 
     //se il messaggio di terminazione e' arrivato ritorno null
-    if(cond_Master){
+    if(no_more_files){
 
         UNLOCK(&coda_mutex)
         return NULL;
@@ -161,11 +162,12 @@ char * pop_Coda_Con(){
 
         free(fileName);
         fileName = NULL;
-        cond_Master = 1;
+        no_more_files = 1;
         BCAST( &coda_cond )
 
     }
-    SIGNAL( &coda_cond )
+
+    BCAST( &coda_cond )
     UNLOCK( &coda_mutex )
 
     return fileName;
@@ -177,10 +179,14 @@ int worker_Fun(void* filepath){
     //dichiaro le variabili
     char * filePath = (char*) filepath;
 
-    fprintf(stderr,"%s",filePath);
+    if(!strncmp(filePath,"quit",4)){
+
+
+
+    }
     FILE * fd = NULL;
     long int retValue = 0;
-    long lBuf = 0 ;
+    int lBuf;
     unsigned long filePathLen = strnlen(filePath , MAX_NAME) + 1;
 
     //apro il file
@@ -191,9 +197,8 @@ int worker_Fun(void* filepath){
 
     }
 
-
     //calcolo il valore
-    while(fread (&lBuf , sizeof (long) ,1,fd) != 4){
+    while(!feof(fd) && fread (&lBuf , sizeof (long) ,1,fd) != sizeof(long)){
 
         retValue ++;
 
@@ -218,6 +223,7 @@ int worker_Fun(void* filepath){
 
     }
 
+
     //creo il nuovo nodo
     Nodo_Lista_Mes * nuovo = NULL;
     nuovo = _malloc (sizeof (NodoCoda));
@@ -225,10 +231,12 @@ int worker_Fun(void* filepath){
     strncpy (nuovo -> nome , filePath , filePathLen);
     nuovo -> val = retValue;
 
+
     //prendo la lock e inserisco il nodo in lista
     LOCK(&mes_list_mutex)
 
     insertCoda (&l_Proc_Ptr , &last_Proc_Ptr , nuovo);
+    printList(l_Proc_Ptr);
 
     SIGNAL(&mes_list_cond)
     UNLOCK(&mes_list_mutex)
@@ -242,21 +250,22 @@ void * worker(void * e){
 
 
     char* nomeFile;
+
     while(1) {
 
-
+        fprintf(stderr, ".");
         if ((nomeFile = pop_Coda_Con ()) == NULL) {
+
 
             return NULL;
 
         }
-
+        fprintf(stderr, "eeeeh ehhh");
         if(worker_Fun(nomeFile) != 0){
 
             return e;
 
         }
-
 
     }
 }

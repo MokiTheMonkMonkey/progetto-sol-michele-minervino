@@ -42,7 +42,7 @@
     fprintf(stderr, "ERRORE FATALE broadcast\n");			\
     pthread_exit((void*)EXIT_FAILURE);						\
   }
-#define ISSET_CODA( s , m ) if ( s != -1 )      { \
+#define ISSET_CODA( s , m ) if ( s != 0 )      { \
     fprintf(stderr, m);                           \
     return -1;      \
 }
@@ -77,7 +77,7 @@ typedef struct codaCon{
 
 }CodaCon;
 
-extern int is_set_coda_cond,cond_Master;
+extern int is_set_coda_cond,no_more_files;
 extern CodaCon coda_concorrente;
 extern Nodo_Lista_Mes * l_Proc_Ptr;
 extern Nodo_Lista_Mes * last_Proc_Ptr;

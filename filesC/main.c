@@ -6,7 +6,7 @@
 #include <dirent.h>
 
 //variabili globali
-int is_set_coda_cond = 0,cond_Master = 0;
+int is_set_coda_cond = 0,no_more_files = 0;
 CodaCon coda_concorrente;
 Nodo_Lista_Mes * l_Proc_Ptr = NULL;
 Nodo_Lista_Mes * last_Proc_Ptr = NULL;
@@ -143,10 +143,10 @@ void * cerca_File_Regolari( void * dir_Name ){
 
 }
 
-int ins_file_singoli( char * argv[] , int OptInd ){
+int ins_file_singoli( int argc , char * argv[] , int OptInd ){
 
     struct stat c_stat;
-    while(argv[OptInd] != NULL){
+    while(OptInd < argc){
 
         if( (stat(argv[OptInd] , &c_stat) ) == -1 ){
 
@@ -156,13 +156,14 @@ int ins_file_singoli( char * argv[] , int OptInd ){
         }
         if(S_ISREG( c_stat.st_mode)){
 
-            insert_coda_con(argv[optind++]);
+            insert_coda_con(argv[OptInd++]);
 
         }
         else{
 
             return -1;
         }
+
 
 
     }
@@ -186,6 +187,7 @@ int main (int argc , char* argv[]){
     char dCase = 0, eW = 1;
 
     pthread_t searcher;
+
     init_coda_con();
 
     while((option = getopt(argc,argv,"d:t:n:q")) != -1){
@@ -241,6 +243,8 @@ int main (int argc , char* argv[]){
 
     }
 
+
+
     //non sono stati inseriti file o cartelle tra gli argomenti
     if(optind == argc && dCase != 1 ){
 
@@ -254,30 +258,38 @@ int main (int argc , char* argv[]){
 
     pthread_t * workers = _malloc(sizeof(pthread_t) * coda_concorrente.th_number);
 
+
+    fprintf(stderr, "mmmm\n");
     /*
      * faccio partire i threads prima di mettere in coda i file singoli
      * cosi' posso far farli concorrere durante l'inserimento
      * */
+
     for(int i = 0; i < coda_concorrente.th_number; i++) {
+
 
         NOT_ZERO(pthread_create(&(workers[i]), NULL, worker, (void*)&eW ) , "errore creazione worker")
 
     }
+
     if(optind != argc){
 
-        if(ins_file_singoli(argv , optind)){
+
+        if(ins_file_singoli( argc , argv , optind)){
 
             perror("non inserire file non regolari tra gli argomenti");
             //gestione errori con free
             return -1;
 
         }
+
     }
 
     //è stata analizzata una cartella e controllo se non ci sono stati errori
     if(dCase){
 
         if(pthread_join(searcher , NULL ) != 0){
+
 
             //gestione errori con free
             return -1;
@@ -288,14 +300,15 @@ int main (int argc , char* argv[]){
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 
-        if(pthread_join( workers[i] , NULL ) != 0){
+
+        if(pthread_join( (workers[i]) , NULL ) != 0){
 
             //gestione errori e free
             return -1;
 
         }
-
     }
+
 
 
 
