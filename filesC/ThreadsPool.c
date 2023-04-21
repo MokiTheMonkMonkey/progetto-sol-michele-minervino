@@ -238,7 +238,7 @@ int worker_Fun(void* filepath){
 }
 
 
-void * worker(){
+void * worker(void * e){
 
 
     char* nomeFile;
@@ -253,7 +253,7 @@ void * worker(){
 
         if(worker_Fun(nomeFile) != 0){
 
-
+            return e;
 
         }
 

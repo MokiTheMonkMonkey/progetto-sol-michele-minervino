@@ -146,7 +146,6 @@ void * cerca_File_Regolari( void * dir_Name ){
 int ins_file_singoli( char * argv[] , int OptInd ){
 
     struct stat c_stat;
-    int r;
     while(argv[OptInd] != NULL){
 
         if( (stat(argv[OptInd] , &c_stat) ) == -1 ){
@@ -184,7 +183,8 @@ int main (int argc , char* argv[]){
 
     long delay = -1;
     int option;
-    char dCase = 1;
+    char dCase = 0, eW = 1;
+
     pthread_t searcher;
     init_coda_con();
 
@@ -218,7 +218,7 @@ int main (int argc , char* argv[]){
             case 'd':
 
                 ISSET_CODA( dCase , "inseririe solo una cartella da analizzare" )
-                dCase = 0;
+                dCase = 1;
                 size_t dirLen = strnlen(optarg,MAX_NAME) + 1;
                 char * dir_name = _malloc(dirLen);
                 strncpy(dir_name,optarg,dirLen);
@@ -258,14 +258,20 @@ int main (int argc , char* argv[]){
      * faccio partire i threads prima di mettere in coda i file singoli
      * cosi' posso far farli concorrere durante l'inserimento
      * */
-    NOT_ZERO( pthread_create ( workers , NULL , worker , NULL ) , "errore creazione worker" )
+    for(int i = 0; i < coda_concorrente.th_number; i++) {
 
-    if(ins_file_singoli(argv , optind)){
+        NOT_ZERO(pthread_create(&(workers[i]), NULL, worker, (void*)&eW ) , "errore creazione worker")
 
-       perror("non inserire file non regolari tra gli argomenti");
-       //gestione errori con free
-       return -1;
+    }
+    if(optind != argc){
 
+        if(ins_file_singoli(argv , optind)){
+
+            perror("non inserire file non regolari tra gli argomenti");
+            //gestione errori con free
+            return -1;
+
+        }
     }
 
     //è stata analizzata una cartella e controllo se non ci sono stati errori
@@ -279,6 +285,19 @@ int main (int argc , char* argv[]){
         }
 
     }
+
+    for(int i = 0; i < coda_concorrente.th_number ; i++){
+
+        if(pthread_join( workers[i] , NULL ) != 0){
+
+            //gestione errori e free
+            return -1;
+
+        }
+
+    }
+
+
 
     printList (l_Proc_Ptr);
 
