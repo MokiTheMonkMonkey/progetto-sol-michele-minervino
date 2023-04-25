@@ -4,7 +4,7 @@
 
 void* _malloc (unsigned long size) {
 
-    void *elem;
+    void *elem = NULL;
 
     if ((elem = malloc(size)) == NULL && size != 0){
 

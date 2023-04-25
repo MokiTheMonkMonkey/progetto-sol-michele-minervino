@@ -6,7 +6,8 @@
 #include <dirent.h>
 
 //variabili globali
-int is_set_coda_cond = 0,no_more_files = 0;
+int is_set_coda_cond = 0,d_cond  = 0,no_more_files = 0;
+char dCase = 0;
 CodaCon coda_concorrente;
 Nodo_Lista_Mes * l_Proc_Ptr = NULL;
 Nodo_Lista_Mes * last_Proc_Ptr = NULL;
@@ -24,14 +25,21 @@ char * valid_name(char * dirname , char * next){
     len1 = strnlen(dirname , MAX_NAME);
     len2 = strnlen(next , MAX_NAME);
 
+
+    char * str_ret;
+
+
+
     if(len1 + len2 + 1 > MAX_NAME)
 
         return NULL;
 
-    char * str_ret = _malloc(len1 + len2 +2);
+
+    str_ret = _malloc(len1 + len2 + 2);
+
     strncpy( str_ret , dirname , len1);
-    str_ret[len1 +1] = '/';
-    str_ret[len1 + 2] = '\0';
+    str_ret[len1] = '/';
+    str_ret[len1 +1] = '\0';
 
     str_ret = strncat( str_ret , next , len1 + len2 + 2);
 
@@ -48,95 +56,61 @@ void * cerca_File_Regolari( void * dir_Name ){
     dir = opendir(dirName);
     if( errno != 0){
 
+
+        fprintf(stderr , "%s",dirName);
         perror("errore opendir");
         return dir_Name;
+
 
     }
     struct dirent * info;
     char * file_name;
     while((errno = 0), ( info = readdir(dir)) != NULL ){
 
-        if(stat(info -> d_name , &d_stat) == -1){
+        if(!(file_name = valid_name(dirName,info -> d_name))){
 
-
+            perror( "nome torppo lungo" );
             return dir_Name;
 
         }
-        if(S_ISREG( d_stat.st_mode )){
 
-            if(!(file_name = valid_name(dirName,info -> d_name))){
+        if(stat(file_name , &d_stat) == -1){
 
-                perror( "nome torppo lungo" );
-                return dir_Name;
+            perror("stat :");
+            return dir_Name;
+
+        }
+
+        if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){
+
+
+            if (S_ISREG(d_stat.st_mode)) {
+
+                insert_coda_con(file_name);
+
+
+            } else {
+
+                if (S_ISDIR(d_stat.st_mode)) {
+
+
+                    if (!(file_name = valid_name(dirName, info->d_name))) {
+
+                        perror("nome troppo lungo");
+                        return dir_Name;
+
+                    }
+                    if (cerca_File_Regolari(file_name)) {
+
+                        return dir_Name;
+
+                    }
+
+                }
 
             }
-            insert_coda_con( file_name );
-
 
         }
-        else{
-
-            if(S_ISDIR( d_stat.st_mode )){
-
-                if(!(strncmp( info -> d_name , "." , 1)) || !(strncmp( info -> d_name , ".." , 2)))
-
-                    break;
-
-                if(!( file_name = valid_name( dirName , info -> d_name ) ) ){
-
-                    perror( "nome troppo lungo" );
-                    return dir_Name;
-
-                }
-                if(cerca_File_Regolari( file_name )){
-
-                    return dir_Name;
-
-                }
-
-            }
-
-        }
-        /*switch ( info -> d_type ){
-
-            case DT_REG:
-
-                if(!(file_name = valid_name(dirName,info -> d_name))){
-
-                    perror( "nome torppo lungo" );
-                    return dir_Name;
-
-                }
-                insert_coda_con( file_name );
-
-                break;
-
-            case DT_DIR:
-
-                if(!(strncmp( info -> d_name , "." , 1)) || !(strncmp( info -> d_name , ".." , 2)))
-
-                    break;
-
-                if(!( file_name = valid_name( dirName , info -> d_name ) ) ){
-
-                    perror( "nome troppo lungo" );
-                    return dir_Name;
-
-                }
-                if(cerca_File_Regolari( file_name )){
-
-                    return dir_Name;
-
-                }
-
-            default:
-
-                break;
-
-
-        }
-
-        */
     }
 
     return NULL;
@@ -182,15 +156,14 @@ int main (int argc , char* argv[]){
 
     }
 
-    long delay = -1;
+    long delay = 0;
     int option;
-    char dCase = 0, eW = 1;
-
-    pthread_t searcher;
+    char eW = 1;
+    char * dir_name = NULL;
 
     init_coda_con();
 
-    while((option = getopt(argc,argv,"d:t:n:q")) != -1){
+    while((option = getopt(argc,argv,"d:t:n:q:")) != -1){
 
         switch(option) {
 
@@ -204,17 +177,19 @@ int main (int argc , char* argv[]){
                 //converto il delay da millisecondi a nanosecondi
                 coda_concorrente.delay -> tv_nsec = (delay%1000)*1000000;
 
+                break;
 
             case 'n':
 
                 ISSET_CODA(coda_concorrente.th_number, "numero di threads inseribile un sola volta")
-                ec_mu_zero(coda_concorrente.th_number = isNumber(optarg),"inserire un numero di thread maggiore di zero" )
+                ec_mu_zero((coda_concorrente.th_number = isNumber(optarg)),"inserire un numero di thread maggiore di zero" )
                 break;
 
             case 'q':
 
                 ISSET_CODA(coda_concorrente.lim, "limite coda concorrente inseribile una sola volta")
-                ec_mu_zero(coda_concorrente.lim = isNumber(optarg) , "inserire un limite queque maggiore di zero" )
+                ec_mu_zero((coda_concorrente.lim = isNumber(optarg)) , "inserire un limite queque maggiore di zero" )
+
                 break;
 
             case 'd':
@@ -222,10 +197,8 @@ int main (int argc , char* argv[]){
                 ISSET_CODA( dCase , "inseririe solo una cartella da analizzare" )
                 dCase = 1;
                 size_t dirLen = strnlen(optarg,MAX_NAME) + 1;
-                char * dir_name = _malloc(dirLen);
+                dir_name = _malloc(dirLen);
                 strncpy(dir_name,optarg,dirLen);
-
-                NOT_ZERO( pthread_create( &searcher , NULL , cerca_File_Regolari , (void *)dir_name ) , "pthread create : [searcher]" )
 
                 break;
 
@@ -244,12 +217,13 @@ int main (int argc , char* argv[]){
     }
 
 
-
     //non sono stati inseriti file o cartelle tra gli argomenti
-    if(optind == argc && dCase != 1 ){
+    if(optind == argc && !dCase){
 
-        perror( "nessuna cartella o file da analizzare" );
-        return -1;
+            perror("nessuna cartella o file da analizzare");
+            return -1;
+
+
 
     }
 
@@ -259,7 +233,6 @@ int main (int argc , char* argv[]){
     pthread_t * workers = _malloc(sizeof(pthread_t) * coda_concorrente.th_number);
 
 
-    fprintf(stderr, "mmmm\n");
     /*
      * faccio partire i threads prima di mettere in coda i file singoli
      * cosi' posso far farli concorrere durante l'inserimento
@@ -288,15 +261,15 @@ int main (int argc , char* argv[]){
     //è stata analizzata una cartella e controllo se non ci sono stati errori
     if(dCase){
 
-        if(pthread_join(searcher , NULL ) != 0){
+        if(cerca_File_Regolari(dir_name) != NULL){
 
-
-            //gestione errori con free
             return -1;
 
         }
+        free(dir_name);
 
     }
+    insert_coda_con("quit");
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 
@@ -307,10 +280,8 @@ int main (int argc , char* argv[]){
             return -1;
 
         }
+
     }
-
-
-
 
     printList (l_Proc_Ptr);
 

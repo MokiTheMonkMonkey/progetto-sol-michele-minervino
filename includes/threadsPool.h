@@ -15,7 +15,7 @@
  if ( (s) < 0 ) {perror(m); exit(EXIT_FAILURE);}
 /*controlla <= 0;stampa errore e termina */
 #define ec_mu_zero(s,m) \
- if ( (s) <= 0 ) {perror(m); exit(EXIT_FAILURE);}
+ if ( s <= 0 ) {perror(m); exit(EXIT_FAILURE);}
 /* controlla NULL; stampa errore e termina (NULL) */
 #define ec_null(s,m) \
  if((s)==NULL) {perror(m); exit(EXIT_FAILURE);}
@@ -42,10 +42,11 @@
     fprintf(stderr, "ERRORE FATALE broadcast\n");			\
     pthread_exit((void*)EXIT_FAILURE);						\
   }
-#define ISSET_CODA( s , m ) if ( s != 0 )      { \
-    fprintf(stderr, m);                           \
-    return -1;      \
-}
+#define ISSET_CODA( s , m ) \
+    if ( s != 0 )      { \
+        fprintf(stderr, m);                           \
+        return -1;      \
+    }
 
 
 
@@ -77,7 +78,8 @@ typedef struct codaCon{
 
 }CodaCon;
 
-extern int is_set_coda_cond,no_more_files;
+extern char dCase;
+extern int is_set_coda_cond,d_cond,no_more_files;
 extern CodaCon coda_concorrente;
 extern Nodo_Lista_Mes * l_Proc_Ptr;
 extern Nodo_Lista_Mes * last_Proc_Ptr;

@@ -25,10 +25,10 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * in
 
 void init_coda_con(){
 
-
     coda_concorrente.th_number = 0;
     coda_concorrente.delay = _malloc(sizeof(struct timespec));
     coda_concorrente.delay -> tv_sec = 0;
+    coda_concorrente.delay -> tv_nsec = 0;
     coda_concorrente.lim = 0;
     coda_concorrente.curr = 0;
     coda_concorrente.coda = NULL;
@@ -42,26 +42,29 @@ void init_coda_con(){
 void set_standard_coda_con(){
 
 
-    LOCK( &coda_mutex )
+    if(coda_concorrente.th_number == 0)
 
-    if(coda_concorrente.th_number == 0) coda_concorrente.th_number = 4;
+        coda_concorrente.th_number = 4;
+
     if(coda_concorrente.delay -> tv_sec == 0) {
 
         coda_concorrente.delay -> tv_sec = 0;
         coda_concorrente.delay -> tv_nsec = 0;
 
     }
-    if(coda_concorrente.lim == 0) coda_concorrente.lim = 8;
+    if(coda_concorrente.lim == 0)
+
+        coda_concorrente.lim = 8;
 
     is_set_coda_cond = 1;
 
-    BCAST( &coda_cond )
-
-    UNLOCK( &coda_mutex )
 
 }
 
 int insert_coda_con(char * nomeFile){
+
+
+    LOCK(&coda_mutex)
 
     if(nanosleep(coda_concorrente.delay, NULL ) == -1){
 
@@ -69,8 +72,6 @@ int insert_coda_con(char * nomeFile){
         return -1;
 
     }
-    LOCK(&coda_mutex)
-
 
     while(!is_set_coda_cond && coda_concorrente.curr == coda_concorrente.lim){
 
@@ -78,7 +79,6 @@ int insert_coda_con(char * nomeFile){
         WAIT(&coda_cond,&coda_mutex)
 
     }
-
 
 
     if(!coda_concorrente.coda){
@@ -110,7 +110,8 @@ int insert_coda_con(char * nomeFile){
     //aggiorno la quantità di nodi presenti
     coda_concorrente.curr++;
 
-    BCAST(&coda_cond)
+    SIGNAL(&coda_cond)
+
 
     UNLOCK(&coda_mutex)
 
@@ -124,10 +125,10 @@ char * pop_Coda_Con(){
 
     LOCK(&coda_mutex)
 
+
     //aspetto che la coda si riempia o che arrivi il messaggio di teminazione
     while(!coda_concorrente.curr && !no_more_files){
 
-        fprintf(stderr, "we");
         WAIT(&coda_cond,&coda_mutex)
 
     }
@@ -135,12 +136,15 @@ char * pop_Coda_Con(){
     //se il messaggio di terminazione e' arrivato ritorno null
     if(no_more_files){
 
+        BCAST(&coda_cond)
         UNLOCK(&coda_mutex)
         return NULL;
 
     }
 
+
     char * fileName = _malloc(coda_concorrente.coda -> dim);
+
     if(--coda_concorrente.curr == 0){
 
         (coda_concorrente.last) = NULL;
@@ -151,7 +155,10 @@ char * pop_Coda_Con(){
         coda_next = (coda_concorrente.coda) -> next;
 
     }
+
+
     strncpy(fileName,coda_concorrente.coda -> nome,coda_concorrente.coda -> dim);
+
 
     free((coda_concorrente.coda) -> nome);
     free(coda_concorrente.coda);
@@ -163,11 +170,14 @@ char * pop_Coda_Con(){
         free(fileName);
         fileName = NULL;
         no_more_files = 1;
+
         BCAST( &coda_cond )
+        UNLOCK(&coda_mutex)
+        return NULL;
 
     }
 
-    BCAST( &coda_cond )
+    SIGNAL( &coda_cond )
     UNLOCK( &coda_mutex )
 
     return fileName;
@@ -181,7 +191,7 @@ int worker_Fun(void* filepath){
 
     if(!strncmp(filePath,"quit",4)){
 
-
+        return 0;
 
     }
     FILE * fd = NULL;
@@ -253,14 +263,12 @@ void * worker(void * e){
 
     while(1) {
 
-        fprintf(stderr, ".");
         if ((nomeFile = pop_Coda_Con ()) == NULL) {
-
 
             return NULL;
 
         }
-        fprintf(stderr, "eeeeh ehhh");
+
         if(worker_Fun(nomeFile) != 0){
 
             return e;
