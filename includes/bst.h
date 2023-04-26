@@ -1,7 +1,6 @@
 #ifndef BST_H
 #define BST_H
 
-
 #include "./util.h"
 
 #define COPYNODE( loc , ins ){          \
@@ -25,12 +24,6 @@ typedef struct treeNode{
 
 }TreeNode;
 
-typedef struct mes {
-
-    char * nome;
-    int val;
-
-}Mes;
 
 void printTree (TreeNode * tree);
 

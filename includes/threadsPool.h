@@ -4,57 +4,12 @@
 #include <pthread.h>
 #include <sys/types.h>
 
-/* controlla se s non e' 0,stampa errore e termina*/
-#define NOT_ZERO(s,m){ \
-        if( ( s )  != 0 ){ \
-            perror ( m ) ;  exit ( EXIT_FAILURE ) ;\
-        }\
-}
-/* controlla < 0; stampa errore e termina */
-#define ec_min_zero(s,m) \
- if ( (s) < 0 ) {perror(m); exit(EXIT_FAILURE);}
-/*controlla <= 0;stampa errore e termina */
-#define ec_mu_zero(s,m) \
- if ( s <= 0 ) {perror(m); exit(EXIT_FAILURE);}
-/* controlla NULL; stampa errore e termina (NULL) */
-#define ec_null(s,m) \
- if((s)==NULL) {perror(m); exit(EXIT_FAILURE);}
-/* controlla -1; stampa errore ed esegue c */
-#define ec_meno1_c(s,m,c) \
- if((s)==-1) {perror(m); c;}
-#define LOCK(l)      if (pthread_mutex_lock(l)!=0)        { \
-    fprintf(stderr, "ERRORE FATALE lock\n");		    \
-    pthread_exit((void*)EXIT_FAILURE);			    \
-  }
-#define UNLOCK(l)    if (pthread_mutex_unlock(l)!=0)      { \
-  fprintf(stderr, "ERRORE FATALE unlock\n");		    \
-  pthread_exit((void*)EXIT_FAILURE);				    \
-  }
-#define WAIT(c,l)    if (pthread_cond_wait(c,l)!=0)       { \
-    fprintf(stderr, "ERRORE FATALE wait\n");		    \
-    pthread_exit((void*)EXIT_FAILURE);				    \
-}
-#define SIGNAL(c)    if (pthread_cond_signal(c)!=0)       {	\
-    fprintf(stderr, "ERRORE FATALE signal\n");			\
-    pthread_exit((void*)EXIT_FAILURE);					\
-  }
-#define BCAST(c)     if (pthread_cond_broadcast(c)!=0)    {		\
-    fprintf(stderr, "ERRORE FATALE broadcast\n");			\
-    pthread_exit((void*)EXIT_FAILURE);						\
-  }
-#define ISSET_CODA( s , m ) \
-    if ( s != 0 )      { \
-        fprintf(stderr, m);                           \
-        return -1;      \
-    }
 
 
 
 typedef struct nodoLista{//Typo lista di messaggi
 
-    char * nome;
-    long int val;
-
+    Mes * msg;
     struct nodoLista * next;
 
 }Nodo_Lista_Mes;
@@ -79,7 +34,7 @@ typedef struct codaCon{
 }CodaCon;
 
 extern char dCase;
-extern int is_set_coda_cond,d_cond,no_more_files;
+extern int is_set_coda_cond,end_list,no_more_files;
 extern CodaCon coda_concorrente;
 extern Nodo_Lista_Mes * l_Proc_Ptr;
 extern Nodo_Lista_Mes * last_Proc_Ptr;
@@ -111,5 +66,6 @@ void printList (Nodo_Lista_Mes *lptr);
 
 void printListCoda (NodoCoda *lptr);
 
+Mes * popListMes (Nodo_Lista_Mes ** lPtr, Nodo_Lista_Mes ** last);
 
 #endif

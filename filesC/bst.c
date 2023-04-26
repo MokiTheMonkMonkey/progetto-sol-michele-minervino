@@ -1,6 +1,7 @@
 #include <bst.h>
 #include "./../includes/bst.h"
 
+
 void insTree(Mes * nodoIns,TreeNode * tree) {
 
     if(tree == NULL){
@@ -12,7 +13,6 @@ void insTree(Mes * nodoIns,TreeNode * tree) {
     if(tree -> val < nodoIns -> val){
 
         insTree(nodoIns,tree -> right);
-        return;
 
     }
     else{

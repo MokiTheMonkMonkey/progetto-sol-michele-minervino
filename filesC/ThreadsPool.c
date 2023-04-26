@@ -1,12 +1,13 @@
 #include "./../includes/util.h"
 #include "../includes/threadsPool.h"
+#include <values.h>
 #include <util.h>
 #include <threadsPool.h>
 
-void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins){
+void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * Ins){
 
+    Nodo_Lista_Mes * ins = _malloc(sizeof(Nodo_Lista_Mes));
     ins -> next = NULL;
-
     //caso base, la lista e' vuota
     if(*lista == NULL){
 
@@ -191,7 +192,7 @@ int worker_Fun(void* filepath){
 
     if(!strncmp(filePath,"quit",4)){
 
-        return 0;
+
 
     }
     FILE * fd = NULL;
@@ -237,16 +238,17 @@ int worker_Fun(void* filepath){
     //creo il nuovo nodo
     Nodo_Lista_Mes * nuovo = NULL;
     nuovo = _malloc (sizeof (NodoCoda));
-    nuovo -> nome = _malloc (filePathLen);
-    strncpy (nuovo -> nome , filePath , filePathLen);
-    nuovo -> val = retValue;
+    nuovo -> msg = _malloc(sizeof(Mes));
+    nuovo -> msg -> nome = _malloc (filePathLen);
+    strncpy (nuovo -> msg -> nome , filePath , filePathLen);
+    free(filepath);
+    nuovo -> msg -> val = retValue;
 
 
     //prendo la lock e inserisco il nodo in lista
     LOCK(&mes_list_mutex)
 
     insertCoda (&l_Proc_Ptr , &last_Proc_Ptr , nuovo);
-    printList(l_Proc_Ptr);
 
     SIGNAL(&mes_list_cond)
     UNLOCK(&mes_list_mutex)
@@ -254,6 +256,7 @@ int worker_Fun(void* filepath){
     return 0;
 
 }
+
 
 
 void * worker(void * e){
@@ -264,6 +267,20 @@ void * worker(void * e){
     while(1) {
 
         if ((nomeFile = pop_Coda_Con ()) == NULL) {
+
+            Nodo_Lista_Mes * ultimo = NULL;
+            ultimo = _malloc (sizeof (NodoCoda));
+            ultimo -> msg = _malloc (sizeof(Mes));
+            ultimo -> msg -> nome = _malloc(4 * sizeof(char));
+            strncpy (ultimo -> msg -> nome , "quit" , 4);
+            ultimo -> msg -> val = MAXLONG;
+
+            LOCK(&mes_list_mutex)
+
+            insertCoda (&l_Proc_Ptr , &last_Proc_Ptr ,  ultimo );
+
+            SIGNAL(&mes_list_cond)
+            UNLOCK(&mes_list_mutex)
 
             return NULL;
 
@@ -278,19 +295,6 @@ void * worker(void * e){
     }
 }
 
-void printList (Nodo_Lista_Mes *lptr){
-
-    //funzione per il debugging stampa una lista
-    if (!lptr){
-
-        fprintf(stderr,"=================\n");
-        return;
-
-    }
-    fprintf (stderr , "%ld %s\n|\nV\n", lptr -> val , lptr -> nome);
-    printList (lptr -> next);
-
-}
 
 void printListCoda (NodoCoda *lptr){
 
@@ -303,5 +307,33 @@ void printListCoda (NodoCoda *lptr){
     }
     fprintf (stderr , "%d %s\n|\nV\n", lptr -> dim , lptr -> nome);
     printListCoda (lptr -> next);
+
+}
+
+Mes * popListMes (Nodo_Lista_Mes ** lPtr, Nodo_Lista_Mes ** last){
+
+    LOCK(&mes_list_mutex)
+
+    while (!lPtr && !end_list){
+
+        WAIT ( &mes_list_cond , &mes_list_mutex )
+
+    }
+
+    Nodo_Lista_Mes * next = (*lPtr) -> next;
+
+    Mes * ret = (*lPtr) -> msg;
+
+    free(*lPtr);
+    (*lPtr) = next;
+    if(next == NULL){
+
+        (*last) = NULL;
+
+    }
+
+    UNLOCK(&mes_list_mutex)
+
+    return ret;
 
 }

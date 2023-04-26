@@ -12,8 +12,10 @@ OBJS        = ./filesC/util.o ./filesC/main.o
 
 all: $(TARGETS)
 
-farm : ./filesC/main.o ./filesC/utils.o ./filesC/bst.o ./filesC/ThreadsPool.o
+farm : ./filesC/main.o ./filesC/utils.o ./filesC/bst.o ./filesC/ThreadsPool.o ./filesC/collector.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^
+
+./filesC/collector.o : ./filesC/collector.c
 
 ./filesC/ThreadsPool.o : ./filesC/ThreadsPool.c
 
