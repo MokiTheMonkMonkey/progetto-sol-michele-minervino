@@ -6,7 +6,13 @@ void insTree(Mes * nodoIns,TreeNode * tree) {
 
     if(tree == NULL){
 
-        COPYNODE(tree, nodoIns);
+        tree = _malloc(sizeof(TreeNode));
+        size_t nameSize = strnlen(nodoIns -> nome,MAX_NAME) + 1;
+        tree -> fileName = _malloc(nameSize);
+        tree -> val = nodoIns -> val;
+        strncpy(tree -> fileName,nodoIns -> nome,nameSize);
+        tree -> right = NULL;
+        tree -> left = NULL;
         return;
 
     }
@@ -54,7 +60,7 @@ void printTree (TreeNode * tree){
 
     }
     printTree(tree -> left);
-    fprintf(stderr,"%d %s",tree -> val,tree -> fileName);
+    fprintf(stderr,"%ld %s",tree -> val,tree -> fileName);
     printTree(tree -> right);
 
 }

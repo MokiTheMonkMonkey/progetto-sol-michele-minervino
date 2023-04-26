@@ -5,8 +5,8 @@
 
 #define COPYNODE( loc , ins ){          \
                                        \
-    loc = _malloc(sizeof(TreeNode));        \
-    int nameSize = (int)strnlen(ins -> nome,255) + 1;       \
+    loc = _malloc(sizeof(TreeNode));    \
+    int nameSize = (int)strnlen(ins -> nome,MAXNAME) + 1;       \
     loc -> fileName = _malloc(nameSize);        \
     loc -> val = ins -> val;        \
     strncpy(loc -> fileName,ins -> nome,nameSize);      \
@@ -17,7 +17,7 @@
 
 typedef struct treeNode{
 
-    int val;
+    long val;
     char * fileName;
     struct treeNode * left;
     struct treeNode * right;

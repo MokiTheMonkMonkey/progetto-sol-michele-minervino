@@ -271,8 +271,8 @@ void * worker(void * e){
             Nodo_Lista_Mes * ultimo = NULL;
             ultimo = _malloc (sizeof (NodoCoda));
             ultimo -> msg = _malloc (sizeof(Mes));
-            ultimo -> msg -> nome = _malloc(4 * sizeof(char));
-            strncpy (ultimo -> msg -> nome , "quit" , 4);
+            ultimo -> msg -> nome = _malloc(5 * sizeof(char));
+            strncpy (ultimo -> msg -> nome , "quit" , 5);
             ultimo -> msg -> val = MAXLONG;
 
             LOCK(&mes_list_mutex)
@@ -314,7 +314,7 @@ Mes * popListMes (Nodo_Lista_Mes ** lPtr, Nodo_Lista_Mes ** last){
 
     LOCK(&mes_list_mutex)
 
-    while (!lPtr && !end_list){
+    while (!*lPtr && !end_list){
 
         WAIT ( &mes_list_cond , &mes_list_mutex )
 
@@ -328,7 +328,7 @@ Mes * popListMes (Nodo_Lista_Mes ** lPtr, Nodo_Lista_Mes ** last){
     (*lPtr) = next;
     if(next == NULL){
 
-        (*last) = NULL;
+        (last) = NULL;
 
     }
 

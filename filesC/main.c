@@ -32,20 +32,35 @@ void * sender(void * err) {
 
     struct sockaddr_un sa;
 
+    struct timespec wait;
+    wait.tv_nsec = 1000000;
+    wait.tv_sec = 1;
+
     sa.sun_family = AF_UNIX;
     strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
     sa.sun_path[SOCK_NAME_LEN] = '\0';
-    for(int i = 0; i < 50 ; i++){
+    for(int i = 0; i < 10 ; i++){
 
         errno = 0;
-        if(connect(fd_sock , (struct sockaddr *)&sa , SOCK_NAME_LEN) == 0)
+        if(connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
 
             break;
 
-        if(errno != 0){
+        }
+
+        if(errno != ENOENT){
 
             *e = errno;
             return e;
+
+        } else{
+
+            if(nanosleep(&wait, NULL) == -1){
+
+                perror("nanosleep :");
+                return e;
+
+            }
 
         }
 
@@ -57,7 +72,8 @@ void * sender(void * err) {
     while(1){
 
         to_send = popListMes(&l_Proc_Ptr,&last_Proc_Ptr);
-        w_bites = sizeof(to_send);
+        w_bites =
+        fprintf(stderr,"%ld",w_bites);
         if(write ( fd_sock , &w_bites , sizeof(long)) == -1){
 
             perror("srittura numero bytes :");
@@ -207,8 +223,8 @@ int ins_file_singoli( int argc , char * argv[] , int OptInd ){
         else{
 
             return -1;
-        }
 
+        }
 
 
     }
@@ -243,19 +259,26 @@ int main (int argc , char* argv[]){
          * e' il figlio
          *collector
          * */
+
         int r_sock;
         long r_bites = -1;
         Mes * message = NULL ;
         TreeNode * tree = NULL;
+
         if((r_sock = sock_connect()) == -1 ){
 
+
             //gestione errori con eventuale unlink
+
             return -1;
 
         }
+
         while(1){
 
+
             if(read( r_sock , &r_bites , sizeof(long)) == -1 ){
+
 
                 //gestione errori con unlink e messaggio al master
                 return -1;
@@ -265,6 +288,7 @@ int main (int argc , char* argv[]){
 
                 break;
 
+            fprintf(stderr, "%ld" , r_bites);
             message = _malloc(r_bites);
             if(readn ( r_sock , &message , r_bites ) == -1 ){
 
@@ -277,6 +301,7 @@ int main (int argc , char* argv[]){
             free(message);
 
         }
+        ec_meno1_c(unlink(SOCK_NAME) , "unlink :" ,return -1)
         printTree(tree);
         freeTree(tree);
         return 0;

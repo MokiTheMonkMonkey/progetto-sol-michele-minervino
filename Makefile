@@ -27,3 +27,5 @@ farm : ./filesC/main.o ./filesC/utils.o ./filesC/bst.o ./filesC/ThreadsPool.o ./
 
 clear :
 	-rm ./filesC/*.o
+	-rm farm
+	-rm *.sck
