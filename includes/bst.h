@@ -29,6 +29,6 @@ void printTree (TreeNode * tree);
 
 void freeTree(TreeNode * tree);
 
-void insTree(Mes * nodoIns,TreeNode * tree);
+void insTree(Mes nodoIns,TreeNode ** tree);
 
 #endif

@@ -66,32 +66,48 @@ void * sender(void * err) {
 
     }
 
+
     Mes * to_send = NULL;
-    long w_bites;
+    size_t w_bites  =0;
 
     while(1){
 
-        to_send = popListMes(&l_Proc_Ptr,&last_Proc_Ptr);
-        w_bites =
-        fprintf(stderr,"%ld",w_bites);
-        if(write ( fd_sock , &w_bites , sizeof(long)) == -1){
+
+        to_send = popListMes ();
+
+        if(to_send)
+
+            w_bites = strnlen(to_send -> nome , MAX_NAME) + 1;
+
+        else{
+
+            w_bites = -2;
+            if(writen(fd_sock , &w_bites , sizeof(size_t)) == -1){
+
+                perror("write quit :");
+                return e;
+
+            }
+            return NULL;
+
+        }
+
+        if(writen ( fd_sock , &w_bites , sizeof(size_t)) == -1){
 
             perror("srittura numero bytes :");
             return e;
 
         }
 
-        if(w_bites == 4){
-
-            free(to_send -> nome);
-            free(to_send);
-            return NULL;
-
-        }
-
-        if(writen( fd_sock , to_send , w_bites ) == -1){
+        if(writen( fd_sock , to_send -> nome , w_bites ) == -1){
 
             perror( "scrittura messaggio :");
+            return e;
+
+        }
+        if(writen ( fd_sock , &(to_send -> val) , sizeof(long int)) == -1){
+
+            perror( "scrittura valore" );
             return e;
 
         }
@@ -126,7 +142,6 @@ char * valid_name(char * dirname , char * next){
     strncpy( str_ret , dirname , len1);
     str_ret[len1] = '/';
     str_ret[len1 +1] = '\0';
-
     str_ret = strncat( str_ret , next , len1 + len2 + 2);
 
     return str_ret;
@@ -197,6 +212,7 @@ void * cerca_File_Regolari( void * dir_Name ){
             }
 
         }
+        free(file_name);
 
     }
 
@@ -250,63 +266,7 @@ int main (int argc , char* argv[]){
 
     int pid;
 
-    ec_meno1_c( pid = fork() , "errore fork :" , return -1 )
 
-
-    if(pid == 0){
-
-        /*
-         * e' il figlio
-         *collector
-         * */
-
-        int r_sock;
-        long r_bites = -1;
-        Mes * message = NULL ;
-        TreeNode * tree = NULL;
-
-        if((r_sock = sock_connect()) == -1 ){
-
-
-            //gestione errori con eventuale unlink
-
-            return -1;
-
-        }
-
-        while(1){
-
-
-            if(read( r_sock , &r_bites , sizeof(long)) == -1 ){
-
-
-                //gestione errori con unlink e messaggio al master
-                return -1;
-
-            }
-            if(r_bites == 4)
-
-                break;
-
-            fprintf(stderr, "%ld" , r_bites);
-            message = _malloc(r_bites);
-            if(readn ( r_sock , &message , r_bites ) == -1 ){
-
-                //gestione errorri con unlink messaggio al master
-                free(message);
-                return -1;
-
-            }
-            insTree(message , tree );
-            free(message);
-
-        }
-        ec_meno1_c(unlink(SOCK_NAME) , "unlink :" ,return -1)
-        printTree(tree);
-        freeTree(tree);
-        return 0;
-
-    }
 
     /*
      * e' il padre
@@ -378,6 +338,82 @@ int main (int argc , char* argv[]){
 
     }
 
+    /*
+     * creo il processo collector
+     * */
+    ec_meno1_c( pid = fork() , "errore fork :" , return -1 )
+
+
+    if(pid == 0){
+
+        /*
+         * e' il figlio
+         *collector
+         * */
+
+        int r_sock;
+        size_t r_bites = 0;
+        Mes message;
+        TreeNode * tree = NULL;
+
+        if((r_sock = sock_connect()) == -1 ){
+
+
+            //gestione errori con eventuale unlink
+
+            return -1;
+
+        }
+
+        while(1) {
+
+
+            if (read(r_sock, &r_bites, sizeof(size_t)) == -1) {
+
+
+                //gestione errori con unlink e messaggio al master
+                return -1;
+
+            }
+            if (r_bites == -2)
+
+                break;
+
+            if (r_bites <= 0)
+
+                return -1;
+
+            message.nome = _malloc(r_bites);
+            if (readn(r_sock, message.nome, r_bites) == -1) {
+
+                //gestione errorri con unlink messaggio al master
+
+                return -1;
+
+            }
+            if (!strncmp(message.nome, "quit", 4)) {
+
+
+                break;
+
+            }
+            if (read(r_sock, &(message.val), sizeof(long int)) == -1){
+
+                fprintf(stderr, "valore");
+                return -2;
+            }
+            insTree( message , &tree );
+            free(message.nome);
+
+
+        }
+        ec_meno1_c(unlink(SOCK_NAME) , "unlink :" ,return -1)
+        printTree(tree);
+        freeTree(tree);
+        return 0;
+
+    }
+
     //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
     set_standard_coda_con();
 
@@ -442,6 +478,13 @@ int main (int argc , char* argv[]){
     if(pthread_join( send , NULL ) != 0){
 
         //gestione errori e free
+        return -1;
+
+    }
+
+    if(waitpid(pid, NULL , 0) == -1){
+
+        perror("errore nella WAIT PID :");
         return -1;
 
     }

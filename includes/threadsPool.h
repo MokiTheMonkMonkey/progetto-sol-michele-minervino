@@ -6,7 +6,6 @@
 
 
 
-
 typedef struct nodoLista{//Typo lista di messaggi
 
     Mes * msg;
@@ -16,7 +15,7 @@ typedef struct nodoLista{//Typo lista di messaggi
 
 typedef struct nodoCoda{
 
-    char*nome;
+    char *nome;
     int dim;
     struct nodoCoda * next;
 
@@ -62,10 +61,8 @@ void init_coda_con();
 
 void set_standard_coda_con();
 
-void printList (Nodo_Lista_Mes *lptr);
-
 void printListCoda (NodoCoda *lptr);
 
-Mes * popListMes (Nodo_Lista_Mes ** lPtr, Nodo_Lista_Mes ** last);
+Mes * popListMes ();
 
 #endif

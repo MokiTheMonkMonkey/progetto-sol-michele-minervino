@@ -6,19 +6,18 @@
 
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * Ins){
 
-    Nodo_Lista_Mes * ins = _malloc(sizeof(Nodo_Lista_Mes));
-    ins -> next = NULL;
+    Ins -> next = NULL;
     //caso base, la lista e' vuota
     if(*lista == NULL){
 
-        *lista = ins;
+        *lista = Ins;
         *last = *lista;
         return;
 
     }
 
     //c'e' almeno un nodo
-    (*last) -> next = ins;
+    (*last) -> next = Ins;
     (*last) = (*last) -> next;
 
 }
@@ -192,7 +191,7 @@ int worker_Fun(void* filepath){
 
     if(!strncmp(filePath,"quit",4)){
 
-
+        return 0;
 
     }
     FILE * fd = NULL;
@@ -241,9 +240,8 @@ int worker_Fun(void* filepath){
     nuovo -> msg = _malloc(sizeof(Mes));
     nuovo -> msg -> nome = _malloc (filePathLen);
     strncpy (nuovo -> msg -> nome , filePath , filePathLen);
-    free(filepath);
     nuovo -> msg -> val = retValue;
-
+    free(filepath);
 
     //prendo la lock e inserisco il nodo in lista
     LOCK(&mes_list_mutex)
@@ -310,28 +308,40 @@ void printListCoda (NodoCoda *lptr){
 
 }
 
-Mes * popListMes (Nodo_Lista_Mes ** lPtr, Nodo_Lista_Mes ** last){
+Mes * popListMes (){
 
     LOCK(&mes_list_mutex)
-
-    while (!*lPtr && !end_list){
+    while (!(l_Proc_Ptr) && !end_list){
 
         WAIT ( &mes_list_cond , &mes_list_mutex )
 
     }
 
-    Nodo_Lista_Mes * next = (*lPtr) -> next;
+    if(!strncmp( l_Proc_Ptr -> msg -> nome , "quit" , 4 )){
 
-    Mes * ret = (*lPtr) -> msg;
+        return NULL;
 
-    free(*lPtr);
-    (*lPtr) = next;
+    }
+    Nodo_Lista_Mes * next = (l_Proc_Ptr) -> next;
+
+    size_t len = strnlen(l_Proc_Ptr -> msg -> nome, MAX_NAME) + 1;
+    Mes * ret = _malloc(sizeof(Mes));
+    ret -> nome = _malloc(len);
+    strncpy( ret -> nome , (l_Proc_Ptr) -> msg -> nome , len  );
+    ret -> val = (l_Proc_Ptr) -> msg -> val;
+
+    free((l_Proc_Ptr) -> msg -> nome);
+    free( (l_Proc_Ptr) -> msg);
+    free(l_Proc_Ptr);
+
+    (l_Proc_Ptr) = next;
     if(next == NULL){
 
-        (last) = NULL;
+        (last_Proc_Ptr) = NULL;
 
     }
 
+    SIGNAL(&mes_list_cond)
     UNLOCK(&mes_list_mutex)
 
     return ret;
