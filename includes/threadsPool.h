@@ -5,7 +5,6 @@
 #include <sys/types.h>
 
 
-
 typedef struct nodoLista{//Typo lista di messaggi
 
     Mes * msg;
@@ -34,6 +33,7 @@ typedef struct codaCon{
 
 extern char dCase;
 extern int is_set_coda_cond,end_list,no_more_files;
+extern long terMes;
 extern CodaCon coda_concorrente;
 extern Nodo_Lista_Mes * l_Proc_Ptr;
 extern Nodo_Lista_Mes * last_Proc_Ptr;
@@ -64,5 +64,7 @@ void set_standard_coda_con();
 void printListCoda (NodoCoda *lptr);
 
 Mes * popListMes ();
+
+void * sender(void *);
 
 #endif

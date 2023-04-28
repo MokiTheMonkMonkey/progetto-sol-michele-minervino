@@ -1,7 +1,8 @@
 #if  !defined(UTIL_H)
 #define UTIL_H
 
-
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +12,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-
+#define SOCK_NAME "farm.sck"
+#define SOCK_NAME_LEN 9
 #define MAX_NAME 256
 
 /* controlla se s non e' 0,stampa errore e termina*/
@@ -64,6 +66,9 @@ typedef struct mes {
     long val;
 
 }Mes;
+
+
+char * valid_name(char * dirname , char * next);
 
 void* _malloc (unsigned long size);
 

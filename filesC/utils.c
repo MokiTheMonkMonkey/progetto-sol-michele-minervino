@@ -1,6 +1,33 @@
 #include <util.h>
 #include "../includes/util.h"
 
+char * valid_name(char * dirname , char * next){
+
+    size_t len1,len2;
+
+    len1 = strnlen(dirname , MAX_NAME);
+    len2 = strnlen(next , MAX_NAME);
+
+
+    char * str_ret;
+
+
+
+    if(len1 + len2 + 1 > MAX_NAME)
+
+        return NULL;
+
+
+    str_ret = _malloc(len1 + len2 + 2);
+
+    strncpy( str_ret , dirname , len1);
+    str_ret[len1] = '/';
+    str_ret[len1 +1] = '\0';
+    str_ret = strncat( str_ret , next , len1 + len2 + 2);
+
+    return str_ret;
+
+}
 
 void* _malloc (unsigned long size) {
 

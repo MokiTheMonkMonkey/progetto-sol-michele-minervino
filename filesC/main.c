@@ -11,6 +11,7 @@
 
 //variabili globali
 int is_set_coda_cond = 0 ,end_list = 0, no_more_files = 0;
+long terMes;
 char dCase = 0;
 CodaCon coda_concorrente;
 Nodo_Lista_Mes * l_Proc_Ptr = NULL;
@@ -22,131 +23,6 @@ pthread_cond_t mes_list_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
 
-void * sender(void * err) {
-
-    int fd_sock ,* e;
-
-    e = err;
-
-    ec_meno1_c(fd_sock = socket ( AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , return err )
-
-    struct sockaddr_un sa;
-
-    struct timespec wait;
-    wait.tv_nsec = 1000000;
-    wait.tv_sec = 1;
-
-    sa.sun_family = AF_UNIX;
-    strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
-    sa.sun_path[SOCK_NAME_LEN] = '\0';
-    for(int i = 0; i < 10 ; i++){
-
-        errno = 0;
-        if(connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
-
-            break;
-
-        }
-
-        if(errno != ENOENT){
-
-            *e = errno;
-            return e;
-
-        } else{
-
-            if(nanosleep(&wait, NULL) == -1){
-
-                perror("nanosleep :");
-                return e;
-
-            }
-
-        }
-
-    }
-
-
-    Mes * to_send = NULL;
-    size_t w_bites  =0;
-
-    while(1){
-
-
-        to_send = popListMes ();
-
-        if(to_send)
-
-            w_bites = strnlen(to_send -> nome , MAX_NAME) + 1;
-
-        else{
-
-            w_bites = -2;
-            if(writen(fd_sock , &w_bites , sizeof(size_t)) == -1){
-
-                perror("write quit :");
-                return e;
-
-            }
-            return NULL;
-
-        }
-
-        if(writen ( fd_sock , &w_bites , sizeof(size_t)) == -1){
-
-            perror("srittura numero bytes :");
-            return e;
-
-        }
-
-        if(writen( fd_sock , to_send -> nome , w_bites ) == -1){
-
-            perror( "scrittura messaggio :");
-            return e;
-
-        }
-        if(writen ( fd_sock , &(to_send -> val) , sizeof(long int)) == -1){
-
-            perror( "scrittura valore" );
-            return e;
-
-        }
-
-        free(to_send -> nome);
-        free(to_send);
-
-    }
-
-
-}
-
-char * valid_name(char * dirname , char * next){
-
-    size_t len1,len2;
-
-    len1 = strnlen(dirname , MAX_NAME);
-    len2 = strnlen(next , MAX_NAME);
-
-
-    char * str_ret;
-
-
-
-    if(len1 + len2 + 1 > MAX_NAME)
-
-        return NULL;
-
-
-    str_ret = _malloc(len1 + len2 + 2);
-
-    strncpy( str_ret , dirname , len1);
-    str_ret[len1] = '/';
-    str_ret[len1 +1] = '\0';
-    str_ret = strncat( str_ret , next , len1 + len2 + 2);
-
-    return str_ret;
-
-}
 
 void * cerca_File_Regolari( void * dir_Name ){
 
@@ -268,10 +144,6 @@ int main (int argc , char* argv[]){
 
 
 
-    /*
-     * e' il padre
-     * MASTER WORKER
-     * */
     init_coda_con();
 
     while((option = getopt(argc,argv,"d:t:n:q:")) != -1){
@@ -338,11 +210,12 @@ int main (int argc , char* argv[]){
 
     }
 
-    /*
+
+
+/*
      * creo il processo collector
      * */
     ec_meno1_c( pid = fork() , "errore fork :" , return -1 )
-
 
     if(pid == 0){
 
@@ -414,6 +287,11 @@ int main (int argc , char* argv[]){
 
     }
 
+    /*
+     * processo padre
+     * master Worker
+     * */
+
     //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
     set_standard_coda_con();
 
@@ -465,13 +343,13 @@ int main (int argc , char* argv[]){
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 
-
         if(pthread_join( (workers[i]) , NULL ) != 0){
 
             //gestione errori e free
             return -1;
 
         }
+
 
     }
 
@@ -481,6 +359,8 @@ int main (int argc , char* argv[]){
         return -1;
 
     }
+
+    free(workers);
 
     if(waitpid(pid, NULL , 0) == -1){
 
