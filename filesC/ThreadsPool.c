@@ -1,7 +1,6 @@
 #include "./../includes/util.h"
 #include "../includes/threadsPool.h"
 #include <values.h>
-#include <util.h>
 #include <threadsPool.h>
 
 void * sender(void * err) {

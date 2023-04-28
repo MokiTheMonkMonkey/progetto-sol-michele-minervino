@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 
+#include <util.h>
 
 typedef struct nodoLista{//Typo lista di messaggi
 
