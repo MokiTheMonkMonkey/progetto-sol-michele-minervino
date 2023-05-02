@@ -45,6 +45,7 @@ extern pthread_mutex_t mes_list_mutex;
 extern pthread_cond_t mes_list_cond;
 extern pthread_mutex_t coda_mutex;
 extern pthread_cond_t coda_cond;
+extern pthread_mutex_t ter_mes_mutex;
 
 
 

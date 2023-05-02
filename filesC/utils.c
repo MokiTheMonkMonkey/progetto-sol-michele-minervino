@@ -11,12 +11,9 @@ char * valid_name(char * dirname , char * next){
 
     char * str_ret;
 
-
-
     if(len1 + len2 + 1 > MAX_NAME)
 
         return NULL;
-
 
     str_ret = _malloc(len1 + len2 + 2);
 

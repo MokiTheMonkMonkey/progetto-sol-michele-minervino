@@ -22,7 +22,7 @@ pthread_mutex_t mes_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t mes_list_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
-
+pthread_mutex_t ter_mes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void * cerca_File_Regolari( void * dir_Name ){
 
@@ -30,18 +30,20 @@ void * cerca_File_Regolari( void * dir_Name ){
     struct stat d_stat;
     DIR * dir;
     errno = 0;
-    dir = opendir(dirName);
-    if( errno != 0){
+    if((dir = opendir(dirName)) == NULL){
+
+        if( errno != 0){
+
+            perror("errore opendir");
+            return dir_Name;
 
 
-        fprintf(stderr , "%s",dirName);
-        perror("errore opendir");
-        return dir_Name;
-
+        }
 
     }
+
     struct dirent * info;
-    char * file_name;
+    char * file_name = NULL;
     while((errno = 0), ( info = readdir(dir)) != NULL ){
 
         if(!(file_name = valid_name(dirName,info -> d_name))){
@@ -63,7 +65,16 @@ void * cerca_File_Regolari( void * dir_Name ){
 
             if (S_ISREG(d_stat.st_mode)) {
 
+                if(nanosleep(coda_concorrente.delay,NULL) != 0){
+
+                    perror("nanosleep :");
+                    exit(EXIT_FAILURE);
+
+                }
                 insert_coda_con(file_name);
+
+                free(file_name);
+                file_name = NULL;
 
 
             } else {
@@ -84,13 +95,33 @@ void * cerca_File_Regolari( void * dir_Name ){
                     }
 
                 }
+                else{
+
+                    free(file_name);
+                    file_name = NULL;
+
+                }
 
             }
 
         }
-        free(file_name);
+        else{
+
+            free(file_name);
+            file_name = NULL;
+
+        }
+
 
     }
+    if(closedir(dir) != 0){
+
+        perror("closedir :");
+        exit(errno);
+
+    }
+
+    free(dir_Name);
 
     return NULL;
 
@@ -109,6 +140,12 @@ int ins_file_singoli( int argc , char * argv[] , int OptInd ){
         }
         if(S_ISREG( c_stat.st_mode)){
 
+            if(nanosleep(coda_concorrente.delay, NULL) != 0){
+
+                perror("nanosleep : ");
+                exit(EXIT_FAILURE);
+
+            }
             insert_coda_con(argv[OptInd++]);
 
         }
@@ -224,6 +261,11 @@ int main (int argc , char* argv[]){
          *collector
          * */
 
+        //libero la memoria allocata nel vecchio processo
+        free(dir_name);
+        free(coda_concorrente.delay);
+
+
         int r_sock;
         size_t r_bites = 0;
         Mes message;
@@ -336,7 +378,6 @@ int main (int argc , char* argv[]){
             return -1;
 
         }
-        free(dir_name);
 
     }
     insert_coda_con("quit");
@@ -353,6 +394,9 @@ int main (int argc , char* argv[]){
 
     }
 
+    free(workers);
+    free(coda_concorrente.delay);
+
     if(pthread_join( send , NULL ) != 0){
 
         //gestione errori e free
@@ -360,7 +404,7 @@ int main (int argc , char* argv[]){
 
     }
 
-    free(workers);
+
 
     if(waitpid(pid, NULL , 0) == -1){
 

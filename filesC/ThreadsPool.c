@@ -3,6 +3,7 @@
 #include <values.h>
 #include <threadsPool.h>
 
+
 void * sender(void * err) {
 
     int fd_sock ,* e;
@@ -20,6 +21,7 @@ void * sender(void * err) {
     sa.sun_family = AF_UNIX;
     strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
     sa.sun_path[SOCK_NAME_LEN] = '\0';
+
     for(int i = 0; i < 10 ; i++){
 
         errno = 0;
@@ -59,21 +61,6 @@ void * sender(void * err) {
         if(to_send) {
 
 
-            if(!strncmp(to_send -> nome , "quit" , 4 )){
-
-                w_bites = -2;
-                if(writen(fd_sock , &w_bites , sizeof(size_t)) == -1){
-
-                    perror("write quit :");
-                    return e;
-
-                }
-                free(to_send -> nome);
-                free(to_send);
-                return NULL;
-
-            }
-
             w_bites = strnlen(to_send->nome, MAX_NAME) + 1;
 
             if(writen ( fd_sock , &w_bites , sizeof(size_t)) == -1){
@@ -99,11 +86,33 @@ void * sender(void * err) {
             free(to_send -> nome);
             free(to_send);
 
+        }else{
+
+
+            w_bites = -2;
+            if(writen(fd_sock , &w_bites , sizeof(size_t)) == -1){
+
+                perror("write quit :");
+                return e;
+
+            }
+
+            errno = 0;
+
+            if(close(fd_sock) == -1){
+
+                *e = errno;
+                return e;
+
+            }
+
+            return NULL;
+
+
         }
 
 
     }
-
 
 }
 
@@ -255,6 +264,7 @@ char * pop_Coda_Con(){
     //se il messaggio di terminazione e' arrivato ritorno null
     if(no_more_files && !coda_concorrente.curr){
 
+
         BCAST(&coda_cond)
         UNLOCK(&coda_mutex)
         return NULL;
@@ -286,13 +296,10 @@ char * pop_Coda_Con(){
 
     if(!strncmp(fileName , "quit" , 4)){
 
-        free(fileName);
-        fileName = NULL;
         no_more_files = 1;
-
         BCAST( &coda_cond )
         UNLOCK(&coda_mutex)
-        return NULL;
+        return fileName;
 
     }
 
@@ -379,18 +386,51 @@ void * worker(void * e){
 
     while(1) {
 
-        if ((nomeFile = pop_Coda_Con ()) == NULL) {
+        if ((nomeFile = pop_Coda_Con ()) && !strncmp ( nomeFile , "quit" , 4)) {
 
-            Nodo_Lista_Mes * ultimo = NULL;
-            ultimo = _malloc (sizeof (NodoCoda));
-            ultimo -> msg = _malloc (sizeof(Mes));
-            ultimo -> msg -> nome = _malloc(5 * sizeof(char));
-            strncpy (ultimo -> msg -> nome , "quit" , 5);
-            ultimo -> msg -> val = MAXLONG;
+            LOCK(&ter_mes_mutex)
 
-            insertCoda (&l_Proc_Ptr , &last_Proc_Ptr ,  ultimo );
+            terMes--;
+
+            UNLOCK(&ter_mes_mutex)
+
+            free(nomeFile);
 
             return NULL;
+
+        }
+
+        if(!nomeFile){
+
+
+            LOCK(&ter_mes_mutex)
+            if(terMes > 1){
+
+                terMes--;
+
+                UNLOCK(&ter_mes_mutex)
+
+                return NULL;
+
+            }else{
+
+
+                UNLOCK(&ter_mes_mutex)
+
+                Nodo_Lista_Mes * ultimo = NULL;
+                ultimo = _malloc (sizeof (NodoCoda));
+                ultimo -> msg = _malloc (sizeof(Mes));
+                ultimo -> msg -> nome = _malloc(5 * sizeof(char));
+                strncpy (ultimo -> msg -> nome , "quit" , 5);
+                ultimo -> msg -> val = MAXLONG;
+
+                insertCoda (&l_Proc_Ptr , &last_Proc_Ptr ,  ultimo );
+
+                return NULL;
+
+            }
+
+
 
         }
 
@@ -428,39 +468,21 @@ Mes * popListMes (){
 
     }
 
-    if(!l_Proc_Ptr){
+    if(!(l_Proc_Ptr)){
 
-        if(terMes >= 0){
-
-            terMes--;
-            SIGNAL( &mes_list_cond )
-            UNLOCK ( &mes_list_mutex )
-
-            return NULL;
-
-        }
-        else{
-
-            Mes * ret = _malloc(sizeof(Mes));
-            ret -> nome = _malloc(sizeof(char) * 5);
-            strncpy(ret -> nome , "quit" , 5);
-            ret -> val = -2;
-
-            SIGNAL ( &mes_list_cond )
-            UNLOCK ( &mes_list_mutex )
-
-            return ret;
-
-        }
+        SIGNAL(&mes_list_cond)
+        UNLOCK(&mes_list_mutex)
+        return NULL;
 
     }
 
     if(!strncmp( l_Proc_Ptr -> msg -> nome , "quit" , 4 )){
 
-        terMes--;
         free(l_Proc_Ptr -> msg -> nome);
         free(l_Proc_Ptr -> msg);
+        free(l_Proc_Ptr);
         l_Proc_Ptr = NULL;
+        end_list = 1;
 
         SIGNAL(&mes_list_cond)
         UNLOCK(&mes_list_mutex)
