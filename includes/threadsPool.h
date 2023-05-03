@@ -16,7 +16,7 @@ typedef struct nodoLista{//Typo lista di messaggi
 typedef struct nodoCoda{
 
     char *nome;
-    int dim;
+    size_t dim;
     struct nodoCoda * next;
 
 }NodoCoda;

@@ -24,18 +24,23 @@ pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ter_mes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void * cerca_File_Regolari( void * dir_Name ){
+char * cerca_File_Regolari( char * dirName ){
 
-    char * dirName = (char *) dir_Name;
+
+    if(dirName == NULL){
+
+        return NULL;
+
+    }
     struct stat d_stat;
-    DIR * dir;
+    DIR * dir = NULL;
     errno = 0;
     if((dir = opendir(dirName)) == NULL){
 
         if( errno != 0){
 
             perror("errore opendir");
-            return dir_Name;
+            return dirName;
 
 
         }
@@ -44,19 +49,19 @@ void * cerca_File_Regolari( void * dir_Name ){
 
     struct dirent * info;
     char * file_name = NULL;
-    while((errno = 0), ( info = readdir(dir)) != NULL ){
+    while( ( errno = 0 ) , ( info = readdir(dir)) != NULL ){
 
-        if(!(file_name = valid_name(dirName,info -> d_name))){
+        if( !( file_name = valid_name ( dirName , info -> d_name ) ) ){
 
             perror( "nome torppo lungo" );
-            return dir_Name;
+            return dirName;
 
         }
 
         if(stat(file_name , &d_stat) == -1){
 
             perror("stat :");
-            return dir_Name;
+            return dirName;
 
         }
 
@@ -65,63 +70,46 @@ void * cerca_File_Regolari( void * dir_Name ){
 
             if (S_ISREG(d_stat.st_mode)) {
 
-                if(nanosleep(coda_concorrente.delay,NULL) != 0){
+                insert_coda_con( file_name );
 
-                    perror("nanosleep :");
-                    exit(EXIT_FAILURE);
+                if( nanosleep( coda_concorrente.delay , NULL ) != 0 ){
+
+                    perror ("nanosleep :");
+                    exit ( EXIT_FAILURE );
 
                 }
-                insert_coda_con(file_name);
-
-                free(file_name);
-                file_name = NULL;
 
 
             } else {
 
-                if (S_ISDIR(d_stat.st_mode)) {
+                if ( S_ISDIR ( d_stat.st_mode ) ) {
 
 
-                    if (!(file_name = valid_name(dirName, info->d_name))) {
+                    if ( cerca_File_Regolari ( file_name ) ) {
 
-                        perror("nome troppo lungo");
-                        return dir_Name;
-
-                    }
-                    if (cerca_File_Regolari(file_name)) {
-
-                        return dir_Name;
+                        return file_name;
 
                     }
 
                 }
-                else{
 
-                    free(file_name);
-                    file_name = NULL;
-
-                }
 
             }
 
-        }
-        else{
-
-            free(file_name);
-            file_name = NULL;
 
         }
 
+
+        free(file_name);
 
     }
-    if(closedir(dir) != 0){
+    if(closedir( dir ) != 0 ) {
+
 
         perror("closedir :");
         exit(errno);
 
     }
-
-    free(dir_Name);
 
     return NULL;
 
@@ -140,13 +128,14 @@ int ins_file_singoli( int argc , char * argv[] , int OptInd ){
         }
         if(S_ISREG( c_stat.st_mode)){
 
+            insert_coda_con(argv[OptInd++]);
+
             if(nanosleep(coda_concorrente.delay, NULL) != 0){
 
                 perror("nanosleep : ");
                 exit(EXIT_FAILURE);
 
             }
-            insert_coda_con(argv[OptInd++]);
 
         }
         else{
@@ -217,7 +206,7 @@ int main (int argc , char* argv[]){
                 ISSET_CODA( dCase , "inseririe solo una cartella da analizzare" )
                 dCase = 1;
                 size_t dirLen = strnlen(optarg,MAX_NAME) + 1;
-                dir_name = _malloc(dirLen);
+                dir_name = s_malloc(dirLen);
                 strncpy(dir_name,optarg,dirLen);
 
                 break;
@@ -298,7 +287,7 @@ int main (int argc , char* argv[]){
 
                 return -1;
 
-            message.nome = _malloc(r_bites);
+            message.nome = s_malloc(r_bites);
             if (readn(r_sock, message.nome, r_bites) == -1) {
 
                 //gestione errorri con unlink messaggio al master
@@ -318,7 +307,7 @@ int main (int argc , char* argv[]){
                 return -2;
             }
             insTree( message , &tree );
-            free(message.nome);
+            free( message.nome );
 
 
         }
@@ -339,7 +328,7 @@ int main (int argc , char* argv[]){
 
     int e = 0;
     pthread_t send;
-    pthread_t * workers = _malloc(sizeof(pthread_t) * coda_concorrente.th_number);
+    pthread_t * workers = s_malloc(sizeof(pthread_t) * coda_concorrente.th_number);
 
 
     /*
@@ -360,7 +349,7 @@ int main (int argc , char* argv[]){
     if(optind != argc){
 
 
-        if(ins_file_singoli( argc , argv , optind)){
+        if(ins_file_singoli( argc , argv , optind )){
 
             perror("non inserire file non regolari tra gli argomenti");
             //gestione errori con free
@@ -373,18 +362,20 @@ int main (int argc , char* argv[]){
     //è stata analizzata una cartella e controllo se non ci sono stati errori
     if(dCase){
 
-        if(cerca_File_Regolari(dir_name) != NULL){
+        if( cerca_File_Regolari ( dir_name ) != NULL){
 
             return -1;
 
         }
+
+        free(dir_name);
 
     }
     insert_coda_con("quit");
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 
-        if(pthread_join( (workers[i]) , NULL ) != 0){
+        if(pthread_join( workers[i] , NULL ) != 0){
 
             //gestione errori e free
             return -1;

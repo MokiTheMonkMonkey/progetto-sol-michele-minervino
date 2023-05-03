@@ -8,14 +8,13 @@ char * valid_name(char * dirname , char * next){
     len1 = strnlen(dirname , MAX_NAME);
     len2 = strnlen(next , MAX_NAME);
 
-
-    char * str_ret;
+    char * str_ret = NULL;
 
     if(len1 + len2 + 1 > MAX_NAME)
 
         return NULL;
 
-    str_ret = _malloc(len1 + len2 + 2);
+    str_ret = s_malloc(len1 + len2 + 2);
 
     strncpy( str_ret , dirname , len1);
     str_ret[len1] = '/';
@@ -26,7 +25,7 @@ char * valid_name(char * dirname , char * next){
 
 }
 
-void* _malloc (unsigned long size) {
+void* s_malloc (unsigned long size) {
 
     void *elem = NULL;
 

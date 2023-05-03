@@ -3,17 +3,6 @@
 
 #include "./util.h"
 
-#define COPYNODE( loc , ins ){          \
-                                       \
-    loc = _malloc(sizeof(TreeNode));    \
-    int nameSize = (int)strnlen(ins -> nome,MAXNAME) + 1;       \
-    loc -> fileName = _malloc(nameSize);        \
-    loc -> val = ins -> val;        \
-    strncpy(loc -> fileName,ins -> nome,nameSize);      \
-    loc -> right = NULL;        \
-    loc -> left = NULL;         \
-        \
-}
 
 typedef struct treeNode{
 

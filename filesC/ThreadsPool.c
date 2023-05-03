@@ -154,7 +154,7 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * I
 void init_coda_con(){
 
     coda_concorrente.th_number = 0;
-    coda_concorrente.delay = _malloc(sizeof(struct timespec));
+    coda_concorrente.delay = s_malloc(sizeof(struct timespec));
     coda_concorrente.delay -> tv_sec = 0;
     coda_concorrente.delay -> tv_nsec = 0;
     coda_concorrente.lim = 0;
@@ -214,9 +214,9 @@ int insert_coda_con(char * nomeFile){
 
 
         //non ci sono nodi quindi inserisco il primo
-        coda_concorrente.coda = _malloc(sizeof(NodoCoda));
-        coda_concorrente.coda -> dim =(int) strnlen ( nomeFile , MAX_NAME) + 1;
-        coda_concorrente.coda -> nome = _malloc(coda_concorrente.coda -> dim);
+        coda_concorrente.coda = s_malloc(sizeof(NodoCoda));
+        coda_concorrente.coda -> dim = strnlen ( nomeFile , MAX_NAME) + 1;
+        coda_concorrente.coda -> nome = s_malloc(coda_concorrente.coda->dim);
         strncpy(coda_concorrente.coda -> nome , nomeFile , coda_concorrente.coda -> dim);
         coda_concorrente.coda -> next = NULL;
         coda_concorrente.last = coda_concorrente.coda;
@@ -227,9 +227,9 @@ int insert_coda_con(char * nomeFile){
         //ci sono nodi quindi appendo all'ultimo
         NodoCoda * nuovoNodo = NULL;
 
-        nuovoNodo = _malloc(sizeof(NodoCoda));
-        nuovoNodo -> dim =(int) strnlen ( nomeFile , MAX_NAME) + 1;
-        nuovoNodo -> nome = _malloc((nuovoNodo) -> dim);
+        nuovoNodo = s_malloc(sizeof(NodoCoda));
+        nuovoNodo -> dim = strnlen ( nomeFile , MAX_NAME) + 1;
+        nuovoNodo -> nome = s_malloc((nuovoNodo)->dim);
         nuovoNodo -> next = NULL;
         strncpy((nuovoNodo) -> nome , nomeFile , (nuovoNodo) -> dim);
         coda_concorrente.last -> next = nuovoNodo;
@@ -272,7 +272,7 @@ char * pop_Coda_Con(){
     }
 
 
-    char * fileName = _malloc(coda_concorrente.coda -> dim);
+    char * fileName = s_malloc(coda_concorrente.coda->dim);
 
     if(--coda_concorrente.curr == 0){
 
@@ -363,9 +363,9 @@ int worker_Fun(void* filepath){
 
     //creo il nuovo nodo
     Nodo_Lista_Mes * nuovo = NULL;
-    nuovo = _malloc (sizeof (NodoCoda));
-    nuovo -> msg = _malloc(sizeof(Mes));
-    nuovo -> msg -> nome = _malloc (filePathLen);
+    nuovo = s_malloc(sizeof(NodoCoda));
+    nuovo -> msg = s_malloc(sizeof(Mes));
+    nuovo -> msg -> nome = s_malloc(filePathLen);
     strncpy (nuovo -> msg -> nome , filePath , filePathLen);
     nuovo -> msg -> val = retValue;
     free(filepath);
@@ -418,9 +418,9 @@ void * worker(void * e){
                 UNLOCK(&ter_mes_mutex)
 
                 Nodo_Lista_Mes * ultimo = NULL;
-                ultimo = _malloc (sizeof (NodoCoda));
-                ultimo -> msg = _malloc (sizeof(Mes));
-                ultimo -> msg -> nome = _malloc(5 * sizeof(char));
+                ultimo = s_malloc(sizeof(NodoCoda));
+                ultimo -> msg = s_malloc(sizeof(Mes));
+                ultimo -> msg -> nome = s_malloc(5 * sizeof(char));
                 strncpy (ultimo -> msg -> nome , "quit" , 5);
                 ultimo -> msg -> val = MAXLONG;
 
@@ -443,20 +443,6 @@ void * worker(void * e){
     }
 }
 
-
-void printListCoda (NodoCoda *lptr){
-
-    //funzione per il debugging stampa una lista
-    if (!lptr){
-
-        fprintf(stderr , "=================\n");
-        return;
-
-    }
-    fprintf (stderr , "%d %s\n|\nV\n", lptr -> dim , lptr -> nome);
-    printListCoda (lptr -> next);
-
-}
 
 Mes * popListMes (){
 
@@ -493,8 +479,8 @@ Mes * popListMes (){
     Nodo_Lista_Mes * next = (l_Proc_Ptr) -> next;
 
     size_t len = strnlen(l_Proc_Ptr -> msg -> nome, MAX_NAME) + 1;
-    Mes * ret = _malloc(sizeof(Mes));
-    ret -> nome = _malloc(len);
+    Mes * ret = s_malloc(sizeof(Mes));
+    ret -> nome = s_malloc(len);
     strncpy( ret -> nome , (l_Proc_Ptr) -> msg -> nome , len  );
     ret -> val = (l_Proc_Ptr) -> msg -> val;
 

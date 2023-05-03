@@ -70,7 +70,7 @@ typedef struct mes {
 
 char * valid_name(char * dirname , char * next);
 
-void* _malloc (unsigned long size);
+void* s_malloc (unsigned long size);
 
 long isNumber(const char* s);
 
