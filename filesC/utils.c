@@ -1,6 +1,10 @@
 #include <util.h>
 #include "../includes/util.h"
 
+/*
+ * funzione che concatena due stringhe se e solo se
+ * la loro lunghezza sommata non supera il limite massimo [MAX_NAME]
+ * */
 char * valid_name(char * dirname , char * next){
 
     size_t len1,len2;
@@ -25,6 +29,10 @@ char * valid_name(char * dirname , char * next){
 
 }
 
+/*
+ * safe malloc
+ * se fallice termina il processo
+ * */
 void* s_malloc (unsigned long size) {
 
     void *elem = NULL;
@@ -40,17 +48,38 @@ void* s_malloc (unsigned long size) {
 
 }
 
+
+/*
+ * traduce stringhe in long positivi
+ * */
 long isNumber(const char* s) {
 
     char* e = NULL;
+    errno = 0;
     long val = strtol(s, &e, 0);
-    if (e != NULL && *e == (char)0) return val;
+    if(errno == ERANGE){
+
+        //non e' rappresentabile
+        return -1;
+
+    }
+    if (e != NULL && *e == (char)0 && val >= 0)
+
+        return val;
+
     return -1;
 
 }
+
+
+/*
+ * funzione per leggere size bytes
+ * anche se la write venisse interrotta da eventuali segnagli
+ * */
+
 size_t readn(long fd, void *buf, size_t size) {
     size_t left = size;
-    long r = -2;
+    long r = 0;
     char *bufptr = (char*)buf;
 
     while(left > 0) {
@@ -67,18 +96,31 @@ size_t readn(long fd, void *buf, size_t size) {
     return size;
 }
 
+
+/*
+ * funzione per scrivere size bytes
+ * anche se la write venisse interrotta da eventuali segnagli
+ * */
 size_t writen(int fd, void *buf, size_t size) {
+
     size_t left = size;
     long r;
-    void *bufptr = (char*)buf;
+    char * buf_ptr = (char*)buf;
     while(left>0) {
-        if ((r=write((int)fd ,bufptr,left)) == -1) {
+
+        if ((r=write((int)fd ,buf_ptr,left)) == -1) {
+
             perror("writen");
             return -1;
+
         }
-        if (r == 0) return 0;
+        if (r == 0)
+
+            return 0;
+
         left    -= r;
-        bufptr  += r;
+        buf_ptr  += r;
+
     }
     return 1;
 }

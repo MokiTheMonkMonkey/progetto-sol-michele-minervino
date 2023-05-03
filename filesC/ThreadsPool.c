@@ -3,7 +3,9 @@
 #include <values.h>
 #include <threadsPool.h>
 
-
+/*
+ * thread dedicato a scirvere messaggi sulla socket
+ * */
 void * sender(void * err) {
 
     int fd_sock ,* e;
@@ -14,14 +16,16 @@ void * sender(void * err) {
 
     struct sockaddr_un sa;
 
+    //imposto il tempo di attesa per riprovare la connect
     struct timespec wait;
-    wait.tv_nsec = 1000000000;
-    wait.tv_sec = 1;
+    wait.tv_nsec = 500000000;
+    wait.tv_sec = 0.5;
 
     sa.sun_family = AF_UNIX;
     strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
     sa.sun_path[SOCK_NAME_LEN] = '\0';
 
+    //provo per 10 volte a connettere
     for(int i = 0; i < 10 ; i++){
 
         errno = 0;
@@ -116,6 +120,9 @@ void * sender(void * err) {
 
 }
 
+/*
+ * inserimento in coda messaggi
+ * */
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * Ins){
 
     Ins -> next = NULL;
@@ -150,7 +157,9 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * I
 
 }
 
-
+/*
+ * inizializzazione coda concorrente
+ * */
 void init_coda_con(){
 
     coda_concorrente.th_number = 0;
@@ -190,6 +199,9 @@ void set_standard_coda_con(){
 
 }
 
+/*
+ * funzione per inserire in coda
+ * */
 int insert_coda_con(char * nomeFile){
 
 

@@ -12,7 +12,6 @@
 //variabili globali
 int is_set_coda_cond = 0 ,end_list = 0, no_more_files = 0;
 long terMes;
-char dCase = 0;
 CodaCon coda_concorrente;
 Nodo_Lista_Mes * l_Proc_Ptr = NULL;
 Nodo_Lista_Mes * last_Proc_Ptr = NULL;
@@ -161,7 +160,8 @@ int main (int argc , char* argv[]){
 
     }
 
-    long delay = 0;
+    char dCase = 0, delay = 0 , thNum = 0 , lim = 0;
+
     int option;
     char eW = 1;
     char * dir_name = NULL;
@@ -185,18 +185,21 @@ int main (int argc , char* argv[]){
                 coda_concorrente.delay -> tv_sec = delay/1000;
                 //converto il delay da millisecondi a nanosecondi
                 coda_concorrente.delay -> tv_nsec = (delay%1000)*1000000;
-
+                delay = 1;
                 break;
 
             case 'n':
 
-                ISSET_CODA(coda_concorrente.th_number, "numero di threads inseribile un sola volta")
+                ISSET_CODA(thNum , "numero di threads inseribile un sola volta")
+                thNum = 1;
                 ec_mu_zero((coda_concorrente.th_number = isNumber(optarg)),"inserire un numero di thread maggiore di zero" )
+
                 break;
 
             case 'q':
 
-                ISSET_CODA(coda_concorrente.lim, "limite coda concorrente inseribile una sola volta")
+                ISSET_CODA(lim, "limite coda concorrente inseribile una sola volta")
+                lim = 1;
                 ec_mu_zero((coda_concorrente.lim = isNumber(optarg)) , "inserire un limite queque maggiore di zero" )
 
                 break;
