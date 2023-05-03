@@ -54,7 +54,7 @@
     fprintf(stderr, "ERRORE FATALE broadcast\n");			\
     pthread_exit((void*)EXIT_FAILURE);						\
   }
-#define ISSET_CODA( s , m ) \
+#define ISSET_CODA(s,m) \
     if ( s != 0 )      { \
         fprintf(stderr, m);                           \
         return -1;      \
@@ -66,6 +66,7 @@ typedef struct mes {
     long val;
 
 }Mes;
+
 
 
 char * valid_name(char * dirname , char * next);

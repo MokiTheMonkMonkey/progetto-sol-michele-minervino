@@ -1,6 +1,5 @@
 #include "./../includes/util.h"
 #include "../includes/threadsPool.h"
-#include <values.h>
 #include <threadsPool.h>
 
 /*
@@ -16,10 +15,10 @@ void * sender(void * err) {
 
     struct sockaddr_un sa;
 
-    //imposto il tempo di attesa per riprovare la connect
+    //imposto il tempo di attesa per riprovare la connect 1 secondo
     struct timespec wait;
-    wait.tv_nsec = 500000000;
-    wait.tv_sec = 0.5;
+    wait.tv_nsec = 1000000000;
+    wait.tv_sec = 1;
 
     sa.sun_family = AF_UNIX;
     strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
@@ -356,8 +355,15 @@ int worker_Fun(void* filepath){
     //se si è interrotto per motivi diversi da EOF
     if(!feof (fd)){
 
+        if(fclose (fd) == EOF){
+
+            int err = errno;
+            perror("fclose :");
+            exit(err);
+
+        }
         perror ("thread fread :");
-        exit (1);
+        return -2;
 
     }
 
@@ -394,6 +400,7 @@ int worker_Fun(void* filepath){
 void * worker(void * e){
 
 
+    int * err = (int*)e;
     char* nomeFile;
 
     while(1) {
@@ -446,13 +453,22 @@ void * worker(void * e){
 
         }
 
-        if(worker_Fun(nomeFile) != 0){
+        if((*err = worker_Fun(nomeFile))) {
 
-            return e;
+            if (*err == -1) {
+
+                fprintf(stderr, "impossibile aprire il file %s\n", nomeFile);
+
+            } else {
+
+                fprintf(stderr, "file %s\n", nomeFile);
+
+            }
 
         }
 
     }
+
 }
 
 
@@ -461,6 +477,7 @@ Mes * popListMes (){
     LOCK(&mes_list_mutex)
 
     while (!(l_Proc_Ptr) && !end_list){
+
 
         WAIT ( &mes_list_cond , &mes_list_mutex )
 

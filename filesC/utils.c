@@ -63,7 +63,7 @@ long isNumber(const char* s) {
         return -1;
 
     }
-    if (e != NULL && *e == (char)0 && val >= 0)
+    if (e != NULL && *e == (char)0)
 
         return val;
 

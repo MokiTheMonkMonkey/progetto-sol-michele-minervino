@@ -3,6 +3,10 @@
 
 #include <pthread.h>
 #include <sys/types.h>
+#include <values.h>
+
+#include <util.h>
+
 
 typedef struct nodoLista{//Typo lista di messaggi
 
@@ -31,7 +35,7 @@ typedef struct codaCon{//coda concorrente
 }CodaCon;
 
 //variabili condivise
-extern char dCase;
+
 extern int is_set_coda_cond,end_list,no_more_files;
 extern long terMes;
 

@@ -10,6 +10,7 @@
 #include <dirent.h>
 
 //variabili globali
+
 int is_set_coda_cond = 0 ,end_list = 0, no_more_files = 0;
 long terMes;
 CodaCon coda_concorrente;
@@ -52,19 +53,15 @@ char * cerca_File_Regolari( char * dirName ){
 
         if( !( file_name = valid_name ( dirName , info -> d_name ) ) ){
 
-            perror( "nome torppo lungo" );
-            return dirName;
+            fprintf( stderr, "nome torppo lungo nella directory : %s" , dirName );
 
         }
-
-        if(stat(file_name , &d_stat) == -1){
+        else if(stat(file_name , &d_stat) == -1){
 
             perror("stat :");
             return dirName;
 
-        }
-
-        if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){
+        } else if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){
 
 
             if (S_ISREG(d_stat.st_mode)) {
@@ -102,8 +99,8 @@ char * cerca_File_Regolari( char * dirName ){
         free(file_name);
 
     }
+    errno = 0;
     if(closedir( dir ) != 0 ) {
-
 
         perror("closedir :");
         exit(errno);
@@ -114,39 +111,45 @@ char * cerca_File_Regolari( char * dirName ){
 
 }
 
-int ins_file_singoli( int argc , char * argv[] , int OptInd ){
+char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
+
 
     struct stat c_stat;
     while(OptInd < argc){
 
-        if( (stat(argv[OptInd] , &c_stat) ) == -1 ){
+        if(strnlen(argv[OptInd],MAX_NAME) == MAX_NAME && argv[OptInd][MAX_NAME] != '\0'){
 
-            perror("errore nella stat :");
-            return -1;
+            fprintf( stderr , "il nome del file %s supera il limite di 255 caratteri :" , argv[OptInd++]);
 
         }
-        if(S_ISREG( c_stat.st_mode)){
 
-            insert_coda_con(argv[OptInd++]);
+        if( (stat(argv[OptInd] , &c_stat) ) == -1 ){
 
-            if(nanosleep(coda_concorrente.delay, NULL) != 0){
+            fprintf( stderr, "errore nel file :%s\n" , argv[OptInd++] );
 
-                perror("nanosleep : ");
-                exit(EXIT_FAILURE);
+        }
+        else {
+            if (S_ISREG(c_stat.st_mode)) {
+
+                insert_coda_con(argv[OptInd++]);
+
+                if (nanosleep(coda_concorrente.delay, NULL) != 0) {
+
+                    perror("nanosleep : ");
+                    exit(EXIT_FAILURE);
+
+                }
+
+            } else {
+
+                fprintf(stderr, "errore nel file :%s\n", argv[OptInd++]);
 
             }
 
         }
-        else{
-
-            return -1;
-
-        }
-
-
     }
 
-    return 0;
+    return NULL;
 
 }
 
@@ -155,21 +158,19 @@ int main (int argc , char* argv[]){
 
     if(argc < 2){
 
-        perror("allora :");
+        perror("inserire argomenti :");
         exit(1);
 
     }
 
-    char dCase = 0, delay = 0 , thNum = 0 , lim = 0;
+    //vari flag per le opzioni
+    char nCase = 0 , qCase = 0;
 
-    int option;
+    int d_Case = 0, tCase = 0 , option;
     char eW = 1;
     char * dir_name = NULL;
 
-    int pid;
-
-
-
+    //inizializzo la coda concorrente
     init_coda_con();
 
     while((option = getopt(argc,argv,"d:t:n:q:")) != -1){
@@ -178,36 +179,37 @@ int main (int argc , char* argv[]){
 
             case 't':
 
-                ISSET_CODA(delay, "delay inseribile una sola volta")
-                ec_min_zero(delay = isNumber(optarg),"inserire un delay positivo")
+                ISSET_CODA(tCase, "delay inseribile una sola volta")
+                ec_mu_zero( (tCase = isNumber ( optarg )) , "inserire un delay positivo")
 
-                //converto il delay in secondi
-                coda_concorrente.delay -> tv_sec = delay/1000;
-                //converto il delay da millisecondi a nanosecondi
-                coda_concorrente.delay -> tv_nsec = (delay%1000)*1000000;
-                delay = 1;
+                //converto il tCase in secondi
+                coda_concorrente.delay -> tv_sec = tCase / 1000;
+                //converto il tCase da millisecondi a nanosecondi
+                coda_concorrente.delay -> tv_nsec = (tCase % 1000) * 1000000;
+                tCase = 1;
+
                 break;
 
             case 'n':
 
-                ISSET_CODA(thNum , "numero di threads inseribile un sola volta")
-                thNum = 1;
+                ISSET_CODA(nCase , "numero di threads inseribile un sola volta")
+                nCase = 1;
                 ec_mu_zero((coda_concorrente.th_number = isNumber(optarg)),"inserire un numero di thread maggiore di zero" )
 
                 break;
 
             case 'q':
 
-                ISSET_CODA(lim, "limite coda concorrente inseribile una sola volta")
-                lim = 1;
+                ISSET_CODA(qCase, "limite coda concorrente inseribile una sola volta")
+                qCase = 1;
                 ec_mu_zero((coda_concorrente.lim = isNumber(optarg)) , "inserire un limite queque maggiore di zero" )
 
                 break;
 
             case 'd':
 
-                ISSET_CODA( dCase , "inseririe solo una cartella da analizzare" )
-                dCase = 1;
+                ISSET_CODA(d_Case , "inseririe solo una cartella da analizzare" )
+                d_Case = 1;
                 size_t dirLen = strnlen(optarg,MAX_NAME) + 1;
                 dir_name = s_malloc(dirLen);
                 strncpy(dir_name,optarg,dirLen);
@@ -217,12 +219,12 @@ int main (int argc , char* argv[]){
             case '?':
 
                 fprintf(stderr,"opzione %c non valida",option);
-                return 1;
+                exit( 1 );
 
             default:
 
                 fprintf(stderr,"inserie opzione valida");
-                return 1;
+                exit( 1 );
 
         }
 
@@ -230,21 +232,19 @@ int main (int argc , char* argv[]){
 
 
     //non sono stati inseriti file o cartelle tra gli argomenti
-    if(optind == argc && !dCase){
+    if(optind == argc && !d_Case){
 
-            perror("nessuna cartella o file da analizzare");
-            return -1;
-
-
+        fprintf( stderr, "nessuna cartella o file da analizzare.\n" );
+        exit ( 1 );
 
     }
 
 
-
-/*
+    int pid;
+    /*
      * creo il processo collector
      * */
-    ec_meno1_c( pid = fork() , "errore fork :" , return -1 )
+    ec_meno1_c( pid = fork() , "errore fork :" , exit ( 1 ) )
 
     if(pid == 0){
 
@@ -285,6 +285,7 @@ int main (int argc , char* argv[]){
             if (r_bites == -2)
 
                 break;
+
 
             if (r_bites <= 0)
 
@@ -329,9 +330,11 @@ int main (int argc , char* argv[]){
     //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
     set_standard_coda_con();
 
+
     int e = 0;
     pthread_t send;
     pthread_t * workers = s_malloc(sizeof(pthread_t) * coda_concorrente.th_number);
+
 
 
     /*
@@ -349,31 +352,29 @@ int main (int argc , char* argv[]){
     NOT_ZERO(pthread_create( &send , NULL , sender , (void *)&e) , "errore creazione sender")
 
 
-    if(optind != argc){
-
-
-        if(ins_file_singoli( argc , argv , optind )){
-
-            perror("non inserire file non regolari tra gli argomenti");
-            //gestione errori con free
-            return -1;
-
-        }
-
-    }
+    char * errC = NULL;
 
     //è stata analizzata una cartella e controllo se non ci sono stati errori
-    if(dCase){
+    if(d_Case){
 
-        if( cerca_File_Regolari ( dir_name ) != NULL){
 
-            return -1;
+        if((errC = cerca_File_Regolari ( dir_name )) != NULL){
+
+            fprintf(stderr , "errore nel file :%s\n" , errC );
+            free(errC);
 
         }
 
         free(dir_name);
 
     }
+
+    if(optind != argc){
+
+        ins_file_singoli( argc , argv , optind );
+
+    }
+
     insert_coda_con("quit");
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
@@ -381,6 +382,7 @@ int main (int argc , char* argv[]){
         if(pthread_join( workers[i] , NULL ) != 0){
 
             //gestione errori e free
+
             return -1;
 
         }
@@ -394,6 +396,7 @@ int main (int argc , char* argv[]){
     if(pthread_join( send , NULL ) != 0){
 
         //gestione errori e free
+
         return -1;
 
     }
