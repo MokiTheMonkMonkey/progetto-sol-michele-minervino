@@ -29,6 +29,7 @@ typedef struct codaCon{//coda concorrente
     long lim;
     long curr;
     long th_number;
+    pthread_t *workers;
     NodoCoda * last;
     NodoCoda * coda;
 
@@ -53,6 +54,7 @@ extern pthread_mutex_t coda_mutex;
 extern pthread_cond_t mes_list_cond;
 extern pthread_cond_t coda_cond;
 
+void masterExitFun();
 
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins);
 

@@ -13,10 +13,11 @@
 
 int is_set_coda_cond = 0 ,end_list = 0, no_more_files = 0;
 long terMes;
+
 CodaCon coda_concorrente;
 Nodo_Lista_Mes * l_Proc_Ptr = NULL;
 Nodo_Lista_Mes * last_Proc_Ptr = NULL;
-
+TreeNode * tree = NULL;
 
 pthread_mutex_t mes_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t mes_list_cond = PTHREAD_COND_INITIALIZER;
@@ -258,17 +259,16 @@ int main (int argc , char* argv[]){
         free(dir_name);
         free(coda_concorrente.delay);
 
+        atexit(&collectorExitFun);
 
         int r_sock;
         size_t r_bites = 0;
         Mes message;
-        TreeNode * tree = NULL;
 
         if((r_sock = sock_connect()) == -1 ){
 
 
             //gestione errori con eventuale unlink
-
             return -1;
 
         }
@@ -313,7 +313,7 @@ int main (int argc , char* argv[]){
                     break;
 
                 }
-                if (read(r_sock, &(message.val), sizeof(long int)) == -1) {
+                if (readn(r_sock, &(message.val), sizeof(long int)) == -1) {
 
                     fprintf(stderr, "valore");
                     exit(3);
@@ -326,7 +326,7 @@ int main (int argc , char* argv[]){
         }
         ec_meno1_c(unlink(SOCK_NAME) , "unlink :" ,return -1)
         printTree(tree);
-        freeTree(tree);
+
         return 0;
 
     }
@@ -339,10 +339,10 @@ int main (int argc , char* argv[]){
     //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
     set_standard_coda_con();
 
+    atexit(&masterExitFun);
 
     int e = 0;
     pthread_t send;
-    pthread_t * workers = s_malloc(sizeof(pthread_t) * coda_concorrente.th_number);
 
 
 
@@ -354,7 +354,7 @@ int main (int argc , char* argv[]){
     for(int i = 0; i < coda_concorrente.th_number; i++) {
 
 
-        NOT_ZERO(pthread_create(&(workers[i]), NULL, worker, NULL ) , "errore creazione worker")
+        NOT_ZERO(pthread_create(&(coda_concorrente.workers[i]), NULL, worker, NULL ) , "errore creazione worker")
 
     }
 
@@ -375,12 +375,11 @@ int main (int argc , char* argv[]){
 
     }
 
-
     insert_coda_con("quit");
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 
-        if(pthread_join( workers[i] , NULL ) != 0){
+        if(pthread_join( coda_concorrente.workers[i] , NULL ) != 0){
 
             //gestione errori e free
             perror("join worker ");
@@ -390,9 +389,6 @@ int main (int argc , char* argv[]){
 
 
     }
-
-    free(workers);
-    free(coda_concorrente.delay);
 
 
     if(pthread_join( send , NULL ) != 0){

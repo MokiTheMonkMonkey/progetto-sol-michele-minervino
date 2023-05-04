@@ -2,6 +2,35 @@
 #include "../includes/threadsPool.h"
 #include <threadsPool.h>
 
+
+void masterExitFun(){
+
+    free(coda_concorrente.delay);
+    free(coda_concorrente.workers);
+
+    NodoCoda * next = NULL;
+
+    while(coda_concorrente.coda){
+
+        next = coda_concorrente.coda -> next;
+        free(coda_concorrente.coda);
+        coda_concorrente.coda = next;
+
+    }
+
+
+    Nodo_Lista_Mes * next_mes = NULL;
+
+    while(l_Proc_Ptr){
+
+        next_mes = l_Proc_Ptr -> next;
+        free(l_Proc_Ptr);
+        l_Proc_Ptr = next_mes;
+
+    }
+
+}
+
 /*
  * thread dedicato a scirvere messaggi sulla socket
  * */
@@ -11,7 +40,7 @@ void * sender(void * err) {
 
     e = err;
 
-    ec_meno1_c(fd_sock = socket ( AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(2) )
+    ec_meno1_c(fd_sock = socket ( AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(-1) )
 
     struct sockaddr_un sa;
 
@@ -76,7 +105,7 @@ void * sender(void * err) {
 
             if(writen ( fd_sock , &w_bites , sizeof(size_t)) == -1){
 
-                *e = 3;
+                *e = -1;
                 perror("srittura numero bytes :");
                 return e;
 
@@ -84,14 +113,14 @@ void * sender(void * err) {
 
             if(writen( fd_sock , to_send -> nome , w_bites ) == -1){
 
-                *e = 3;
+                *e = -1;
                 perror( "scrittura messaggio :");
                 return e;
 
             }
             if(writen ( fd_sock , &(to_send -> val) , sizeof(long int)) == -1){
 
-                *e = 3;
+                *e = -1;
                 perror( "scrittura valore :" );
                 return e;
 
@@ -106,7 +135,7 @@ void * sender(void * err) {
             w_bites = -2;
             if(writen(fd_sock , &w_bites , sizeof(size_t)) == -1){
 
-                *e = 3;
+                *e = -1;
                 perror("write quit :");
                 return e;
 
@@ -116,7 +145,8 @@ void * sender(void * err) {
 
             if((errno = 0) , close(fd_sock) == -1){
 
-                *e = 3;
+                *e = errno;
+                perror("socket close ");
                 return e;
 
             }
@@ -193,6 +223,8 @@ void set_standard_coda_con(){
     if(coda_concorrente.th_number == 0)
 
         coda_concorrente.th_number = 4;
+
+    coda_concorrente.workers = s_malloc(sizeof(pthread_t) * coda_concorrente.th_number);
 
     if(coda_concorrente.delay -> tv_sec == 0) {
 
@@ -418,7 +450,7 @@ void * worker(){
 
     while(1) {
 
-        if ((nomeFile = pop_Coda_Con ()) && !strncmp ( nomeFile , "quit" , 4)) {
+        if ((nomeFile = pop_Coda_Con ()) && !strncmp ( nomeFile , "quit" , 4) ) {
 
             LOCK(&ter_mes_mutex)
 

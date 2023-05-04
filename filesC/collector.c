@@ -1,6 +1,13 @@
 #include <collector.h>
 #include "./../includes/collector.h"
 
+extern TreeNode * tree;
+
+void collectorExitFun(){
+
+    freeTree(tree);
+
+}
 
 int sock_connect(){
 

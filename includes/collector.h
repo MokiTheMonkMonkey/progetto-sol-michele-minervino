@@ -6,6 +6,7 @@
 #include <util.h>
 #include "./../includes/util.h"
 
+void collectorExitFun();
 
 int sock_connect();
 
