@@ -24,12 +24,12 @@ pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ter_mes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-char * cerca_File_Regolari( char * dirName ){
+void cerca_File_Regolari( char * dirName ){
 
 
     if(dirName == NULL){
 
-        return NULL;
+        return;
 
     }
     struct stat d_stat;
@@ -39,8 +39,8 @@ char * cerca_File_Regolari( char * dirName ){
 
         if( errno != 0){
 
-            perror("errore opendir");
-            return dirName;
+            fprintf(stderr,"errore opendir : %s\n",dirName);
+            return;
 
 
         }
@@ -58,10 +58,12 @@ char * cerca_File_Regolari( char * dirName ){
         }
         else if(stat(file_name , &d_stat) == -1){
 
-            perror("stat :");
-            return dirName;
+            fprintf(stderr,"errore nella stat nel file :%s",file_name);
+            free(file_name);
+            exit(2);
 
-        } else if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){
+        }
+        else if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){
 
 
             if (S_ISREG(d_stat.st_mode)) {
@@ -81,11 +83,12 @@ char * cerca_File_Regolari( char * dirName ){
                 if ( S_ISDIR ( d_stat.st_mode ) ) {
 
 
-                    if ( cerca_File_Regolari ( file_name ) ) {
+                    cerca_File_Regolari ( file_name );
 
-                        return file_name;
+                }
+                else{
 
-                    }
+                    fprintf(stderr , "nella cartella %s torvato file non regolare :%s\n" , dirName , file_name);
 
                 }
 
@@ -95,10 +98,10 @@ char * cerca_File_Regolari( char * dirName ){
 
         }
 
-
         free(file_name);
 
     }
+
     errno = 0;
     if(closedir( dir ) != 0 ) {
 
@@ -107,7 +110,6 @@ char * cerca_File_Regolari( char * dirName ){
 
     }
 
-    return NULL;
 
 }
 
@@ -165,9 +167,8 @@ int main (int argc , char* argv[]){
 
     //vari flag per le opzioni
     char nCase = 0 , qCase = 0;
-
     int d_Case = 0, tCase = 0 , option;
-    char eW = 1;
+
     char * dir_name = NULL;
 
     //inizializzo la coda concorrente
@@ -287,32 +288,40 @@ int main (int argc , char* argv[]){
                 break;
 
 
-            if (r_bites <= 0)
+            if(r_bites == -3){
 
-                return -1;
-
-            message.nome = s_malloc(r_bites);
-            if (readn(r_sock, message.nome, r_bites) == -1) {
-
-                //gestione errorri con unlink messaggio al master
-
-                return -1;
+                printTree(tree);
 
             }
-            if (!strncmp(message.nome, "quit", 4)) {
+            else {
+
+                if (r_bites <= 0)
+
+                    return -1;
+
+                message.nome = s_malloc(r_bites);
+                if (readn(r_sock, message.nome, r_bites) == -1) {
+
+                    //gestione errorri con unlink messaggio al master
+
+                    return -1;
+
+                }
+                if (!strncmp(message.nome, "quit", 4)) {
 
 
-                break;
+                    break;
+
+                }
+                if (read(r_sock, &(message.val), sizeof(long int)) == -1) {
+
+                    fprintf(stderr, "valore");
+                    exit(3);
+                }
+                insTree(message, &tree);
+                free(message.nome);
 
             }
-            if (read(r_sock, &(message.val), sizeof(long int)) == -1){
-
-                fprintf(stderr, "valore");
-                return -2;
-            }
-            insTree( message , &tree );
-            free( message.nome );
-
 
         }
         ec_meno1_c(unlink(SOCK_NAME) , "unlink :" ,return -1)
@@ -345,35 +354,27 @@ int main (int argc , char* argv[]){
     for(int i = 0; i < coda_concorrente.th_number; i++) {
 
 
-        NOT_ZERO(pthread_create(&(workers[i]), NULL, worker, (void*)&eW ) , "errore creazione worker")
+        NOT_ZERO(pthread_create(&(workers[i]), NULL, worker, NULL ) , "errore creazione worker")
 
     }
 
     NOT_ZERO(pthread_create( &send , NULL , sender , (void *)&e) , "errore creazione sender")
 
 
-    char * errC = NULL;
-
-    //è stata analizzata una cartella e controllo se non ci sono stati errori
-    if(d_Case){
-
-
-        if((errC = cerca_File_Regolari ( dir_name )) != NULL){
-
-            fprintf(stderr , "errore nel file :%s\n" , errC );
-            free(errC);
-
-        }
-
-        free(dir_name);
-
-    }
-
     if(optind != argc){
 
         ins_file_singoli( argc , argv , optind );
 
     }
+
+    //è stata analizzata una cartella e controllo se non ci sono stati errori
+    if(d_Case){
+
+        cerca_File_Regolari ( dir_name );
+        free(dir_name);
+
+    }
+
 
     insert_coda_con("quit");
 
@@ -382,7 +383,7 @@ int main (int argc , char* argv[]){
         if(pthread_join( workers[i] , NULL ) != 0){
 
             //gestione errori e free
-
+            perror("join worker ");
             return -1;
 
         }
@@ -393,20 +394,18 @@ int main (int argc , char* argv[]){
     free(workers);
     free(coda_concorrente.delay);
 
+
     if(pthread_join( send , NULL ) != 0){
 
         //gestione errori e free
-
-        return -1;
+        exit(2);
 
     }
-
-
 
     if(waitpid(pid, NULL , 0) == -1){
 
         perror("errore nella WAIT PID :");
-        return -1;
+        exit(e);
 
     }
 

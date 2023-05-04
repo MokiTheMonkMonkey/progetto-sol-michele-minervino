@@ -11,24 +11,24 @@ void * sender(void * err) {
 
     e = err;
 
-    ec_meno1_c(fd_sock = socket ( AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , return err )
+    ec_meno1_c(fd_sock = socket ( AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(2) )
 
     struct sockaddr_un sa;
 
     //imposto il tempo di attesa per riprovare la connect 1 secondo
     struct timespec wait;
-    wait.tv_nsec = 1000000000;
-    wait.tv_sec = 1;
+    wait.tv_nsec = 50000000;
+    wait.tv_sec = 0;
 
     sa.sun_family = AF_UNIX;
     strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
     sa.sun_path[SOCK_NAME_LEN] = '\0';
 
     //provo per 10 volte a connettere
-    for(int i = 0; i < 10 ; i++){
+    int i;
+    for(i = 0; i < 10 ; i++){
 
-        errno = 0;
-        if(connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
+        if((errno = 0) , connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
 
             break;
 
@@ -41,14 +41,21 @@ void * sender(void * err) {
 
         } else{
 
-            if(nanosleep(&wait, NULL) == -1){
+            if((errno = 0),nanosleep(&wait, NULL) == -1){
 
-                perror("nanosleep :");
+                *e= errno;
+                perror("nanosleep del sender :");
                 return e;
 
             }
 
         }
+
+    }
+    if(i==10){
+
+        fprintf(stderr,"connect fallita\n");
+        exit(EXIT_FAILURE);
 
     }
 
@@ -57,6 +64,7 @@ void * sender(void * err) {
     size_t w_bites  =0;
 
     while(1){
+
 
 
         to_send = popListMes ();
@@ -68,6 +76,7 @@ void * sender(void * err) {
 
             if(writen ( fd_sock , &w_bites , sizeof(size_t)) == -1){
 
+                *e = 3;
                 perror("srittura numero bytes :");
                 return e;
 
@@ -75,13 +84,15 @@ void * sender(void * err) {
 
             if(writen( fd_sock , to_send -> nome , w_bites ) == -1){
 
+                *e = 3;
                 perror( "scrittura messaggio :");
                 return e;
 
             }
             if(writen ( fd_sock , &(to_send -> val) , sizeof(long int)) == -1){
 
-                perror( "scrittura valore" );
+                *e = 3;
+                perror( "scrittura valore :" );
                 return e;
 
             }
@@ -95,16 +106,17 @@ void * sender(void * err) {
             w_bites = -2;
             if(writen(fd_sock , &w_bites , sizeof(size_t)) == -1){
 
+                *e = 3;
                 perror("write quit :");
                 return e;
 
             }
 
-            errno = 0;
 
-            if(close(fd_sock) == -1){
 
-                *e = errno;
+            if((errno = 0) , close(fd_sock) == -1){
+
+                *e = 3;
                 return e;
 
             }
@@ -368,9 +380,8 @@ int worker_Fun(void* filepath){
     }
 
     //chiudo il file
-    errno = 0;
 
-    if(fclose (fd) == EOF){
+    if((errno = 0),fclose (fd) == EOF){
 
         int err = errno;
         perror("fclose :");
@@ -396,11 +407,13 @@ int worker_Fun(void* filepath){
 }
 
 
+/*
+ * funzione worker che prende dalla coda concorrente e chiama la workerFun
+ *
+ * */
+void * worker(){
 
-void * worker(void * e){
 
-
-    int * err = (int*)e;
     char* nomeFile;
 
     while(1) {
@@ -433,7 +446,6 @@ void * worker(void * e){
 
             }else{
 
-
                 UNLOCK(&ter_mes_mutex)
 
                 Nodo_Lista_Mes * ultimo = NULL;
@@ -453,21 +465,11 @@ void * worker(void * e){
 
         }
 
-        if((*err = worker_Fun(nomeFile))) {
+        worker_Fun(nomeFile);
 
-            if (*err == -1) {
-
-                fprintf(stderr, "impossibile aprire il file %s\n", nomeFile);
-
-            } else {
-
-                fprintf(stderr, "file %s\n", nomeFile);
-
-            }
-
-        }
 
     }
+
 
 }
 

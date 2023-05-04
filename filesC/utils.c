@@ -79,7 +79,7 @@ long isNumber(const char* s) {
 
 size_t readn(long fd, void *buf, size_t size) {
     size_t left = size;
-    long r = 0;
+    long r;
     char *bufptr = (char*)buf;
 
     while(left > 0) {

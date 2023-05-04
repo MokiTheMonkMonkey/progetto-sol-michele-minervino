@@ -56,7 +56,7 @@ extern pthread_cond_t coda_cond;
 
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins);
 
-void * worker(void * e);
+void * worker();
 
 int worker_Fun(void* filepath);
 
