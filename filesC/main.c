@@ -2,6 +2,8 @@
 #include <threadsPool.h>
 #include <collector.h>
 #include <bst.h>
+#include <masterWorker.h>
+#include "./../includes/masterWorker.h"
 #include "./../includes/bst.h"
 #include "../includes/util.h"
 #include "../includes/threadsPool.h"
@@ -14,16 +16,21 @@
 int is_set_coda_cond = 0 ,end_list = 0, no_more_files = 0;
 long terMes;
 
+sigset_t mask;
+
+volatile sig_atomic_t  signExit = 0,printM = 0;
+
 CodaCon coda_concorrente;
 Nodo_Lista_Mes * l_Proc_Ptr = NULL;
 Nodo_Lista_Mes * last_Proc_Ptr = NULL;
 TreeNode * tree = NULL;
 
-pthread_mutex_t mes_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t mes_list_cond = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ter_mes_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mes_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_cond_t mes_list_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
 
 void cerca_File_Regolari( char * dirName ){
 
@@ -36,7 +43,7 @@ void cerca_File_Regolari( char * dirName ){
     struct stat d_stat;
     DIR * dir = NULL;
     errno = 0;
-    if((dir = opendir(dirName)) == NULL){
+    if((dir = opendir(dirName)) == NULL && !terMes){
 
         if( errno != 0){
 
@@ -50,7 +57,7 @@ void cerca_File_Regolari( char * dirName ){
 
     struct dirent * info;
     char * file_name = NULL;
-    while( ( errno = 0 ) , ( info = readdir(dir)) != NULL ){
+    while( ( errno = 0 ) , (( info = readdir(dir)) != NULL && !signExit) ){
 
         if( !( file_name = valid_name ( dirName , info -> d_name ) ) ){
 
@@ -81,7 +88,7 @@ void cerca_File_Regolari( char * dirName ){
 
             } else {
 
-                if ( S_ISDIR ( d_stat.st_mode ) ) {
+                if ( S_ISDIR ( d_stat.st_mode ) && !signExit) {
 
 
                     cerca_File_Regolari ( file_name );
@@ -89,7 +96,9 @@ void cerca_File_Regolari( char * dirName ){
                 }
                 else{
 
-                    fprintf(stderr , "nella cartella %s torvato file non regolare :%s\n" , dirName , file_name);
+                    if(!signExit)
+
+                        fprintf(stderr , "nella cartella %s torvato file non regolare :%s\n" , dirName , file_name);
 
                 }
 
@@ -241,7 +250,6 @@ int main (int argc , char* argv[]){
 
     }
 
-
     int pid;
     /*
      * creo il processo collector
@@ -254,6 +262,8 @@ int main (int argc , char* argv[]){
          * e' il figlio
          *collector
          * */
+
+        signalMask();
 
         //libero la memoria allocata nel vecchio processo
         free(dir_name);
@@ -336,13 +346,19 @@ int main (int argc , char* argv[]){
      * master Worker
      * */
 
-    //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
-    set_standard_coda_con();
+
+    pthread_t send,signalH;
 
     atexit(&masterExitFun);
 
+    signalMask();
+
+    pthread_create(&signalH,NULL, signalHandler,NULL);
+
+    //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
+    set_standard_coda_con();
+
     int e = 0;
-    pthread_t send;
 
 
 
@@ -402,6 +418,20 @@ int main (int argc , char* argv[]){
 
         perror("errore nella WAIT PID :");
         exit(e);
+
+    }
+
+    if((e = pthread_kill(signalH,SIGQUIT)) != 0){
+
+        perror("kill signal handler ");
+        exit(e);
+
+    }
+
+    if(pthread_join(signalH,NULL) != 0){
+
+        perror("join signal handler ");
+        exit(EXIT_FAILURE);
 
     }
 

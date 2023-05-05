@@ -7,6 +7,7 @@
 
 #include <util.h>
 
+extern volatile sig_atomic_t signExit, printM;
 
 typedef struct nodoLista{//Typo lista di messaggi
 
@@ -54,21 +55,13 @@ extern pthread_mutex_t coda_mutex;
 extern pthread_cond_t mes_list_cond;
 extern pthread_cond_t coda_cond;
 
-void masterExitFun();
-
 void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins);
 
 void * worker();
 
 int worker_Fun(void* filepath);
 
-char * pop_Coda_Con();
-
 int insert_coda_con(char * nomeFile);
-
-void init_coda_con();
-
-void set_standard_coda_con();
 
 Mes * popListMes ();
 
