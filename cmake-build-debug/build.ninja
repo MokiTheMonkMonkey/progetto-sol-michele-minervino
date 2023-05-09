@@ -49,41 +49,41 @@ cmake_ninja_workdir = /home/michele/Scrivania/progettoSol/untitled/cmake-build-d
 
 build cmake_object_order_depends_target_untitled: phony || CMakeFiles/untitled.dir
 
-build CMakeFiles/untitled.dir/filesC/main.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/filesC/main.c || cmake_object_order_depends_target_untitled
-  DEP_FILE = CMakeFiles/untitled.dir/filesC/main.c.o.d
+build CMakeFiles/untitled.dir/source/main.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/source/main.c || cmake_object_order_depends_target_untitled
+  DEP_FILE = CMakeFiles/untitled.dir/source/main.c.o.d
   FLAGS = -g -fdiagnostics-color=always -std=gnu99
   OBJECT_DIR = CMakeFiles/untitled.dir
-  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/filesC
+  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/source
 
-build CMakeFiles/untitled.dir/filesC/utils.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/filesC/utils.c || cmake_object_order_depends_target_untitled
-  DEP_FILE = CMakeFiles/untitled.dir/filesC/utils.c.o.d
+build CMakeFiles/untitled.dir/source/utils.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/source/utils.c || cmake_object_order_depends_target_untitled
+  DEP_FILE = CMakeFiles/untitled.dir/source/utils.c.o.d
   FLAGS = -g -fdiagnostics-color=always -std=gnu99
   OBJECT_DIR = CMakeFiles/untitled.dir
-  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/filesC
+  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/source
 
-build CMakeFiles/untitled.dir/filesC/bst.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/filesC/bst.c || cmake_object_order_depends_target_untitled
-  DEP_FILE = CMakeFiles/untitled.dir/filesC/bst.c.o.d
+build CMakeFiles/untitled.dir/source/bst.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/source/bst.c || cmake_object_order_depends_target_untitled
+  DEP_FILE = CMakeFiles/untitled.dir/source/bst.c.o.d
   FLAGS = -g -fdiagnostics-color=always -std=gnu99
   OBJECT_DIR = CMakeFiles/untitled.dir
-  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/filesC
+  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/source
 
-build CMakeFiles/untitled.dir/filesC/collector.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/filesC/collector.c || cmake_object_order_depends_target_untitled
-  DEP_FILE = CMakeFiles/untitled.dir/filesC/collector.c.o.d
+build CMakeFiles/untitled.dir/source/collector.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/source/collector.c || cmake_object_order_depends_target_untitled
+  DEP_FILE = CMakeFiles/untitled.dir/source/collector.c.o.d
   FLAGS = -g -fdiagnostics-color=always -std=gnu99
   OBJECT_DIR = CMakeFiles/untitled.dir
-  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/filesC
+  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/source
 
-build CMakeFiles/untitled.dir/filesC/ThreadsPool.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/filesC/ThreadsPool.c || cmake_object_order_depends_target_untitled
-  DEP_FILE = CMakeFiles/untitled.dir/filesC/ThreadsPool.c.o.d
+build CMakeFiles/untitled.dir/source/ThreadsPool.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/source/ThreadsPool.c || cmake_object_order_depends_target_untitled
+  DEP_FILE = CMakeFiles/untitled.dir/source/ThreadsPool.c.o.d
   FLAGS = -g -fdiagnostics-color=always -std=gnu99
   OBJECT_DIR = CMakeFiles/untitled.dir
-  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/filesC
+  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/source
 
-build CMakeFiles/untitled.dir/filesC/masterWorker.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/filesC/masterWorker.c || cmake_object_order_depends_target_untitled
-  DEP_FILE = CMakeFiles/untitled.dir/filesC/masterWorker.c.o.d
+build CMakeFiles/untitled.dir/source/masterWorker.c.o: C_COMPILER__untitled_Debug /home/michele/Scrivania/progettoSol/untitled/source/masterWorker.c || cmake_object_order_depends_target_untitled
+  DEP_FILE = CMakeFiles/untitled.dir/source/masterWorker.c.o.d
   FLAGS = -g -fdiagnostics-color=always -std=gnu99
   OBJECT_DIR = CMakeFiles/untitled.dir
-  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/filesC
+  OBJECT_FILE_DIR = CMakeFiles/untitled.dir/source
 
 
 # =============================================================================
@@ -93,7 +93,7 @@ build CMakeFiles/untitled.dir/filesC/masterWorker.c.o: C_COMPILER__untitled_Debu
 #############################################
 # Link the executable untitled
 
-build untitled: C_EXECUTABLE_LINKER__untitled_Debug CMakeFiles/untitled.dir/filesC/main.c.o CMakeFiles/untitled.dir/filesC/utils.c.o CMakeFiles/untitled.dir/filesC/bst.c.o CMakeFiles/untitled.dir/filesC/collector.c.o CMakeFiles/untitled.dir/filesC/ThreadsPool.c.o CMakeFiles/untitled.dir/filesC/masterWorker.c.o
+build untitled: C_EXECUTABLE_LINKER__untitled_Debug CMakeFiles/untitled.dir/source/main.c.o CMakeFiles/untitled.dir/source/utils.c.o CMakeFiles/untitled.dir/source/bst.c.o CMakeFiles/untitled.dir/source/collector.c.o CMakeFiles/untitled.dir/source/ThreadsPool.c.o CMakeFiles/untitled.dir/source/masterWorker.c.o
   FLAGS = -g
   OBJECT_DIR = CMakeFiles/untitled.dir
   POST_BUILD = :

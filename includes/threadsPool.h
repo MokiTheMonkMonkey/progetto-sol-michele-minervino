@@ -6,6 +6,7 @@
 #include <values.h>
 
 #include <util.h>
+#include "util.h"
 
 extern volatile sig_atomic_t signExit, printM;
 

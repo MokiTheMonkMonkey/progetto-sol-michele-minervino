@@ -1,3 +1,0 @@
-/home/michele/Scrivania/progetto sol/untitled/filesC/cmake-build-debug/CMakeFiles/filesC.dir
-/home/michele/Scrivania/progetto sol/untitled/filesC/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/michele/Scrivania/progetto sol/untitled/filesC/cmake-build-debug/CMakeFiles/rebuild_cache.dir

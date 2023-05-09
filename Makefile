@@ -2,9 +2,9 @@ CC			=  gcc
 CFLAGS		+= -pedantic -Wall -g
 INCLUDES	= -I ./includes
 TARGETS		= farm
-OBJS        = ./filesC/util.o ./filesC/main.o
+OBJS        = ./source/main.o ./source/utils.o ./source/bst.o ./source/ThreadsPool.o ./source/collector.o ./source/masterWorker.o
 
-.PHONY: all clear
+.PHONY: all clear cleanExe test testSig testClean testAll
 .SUFFIXES: .c .h
 
 %.o: %.c
@@ -12,22 +12,44 @@ OBJS        = ./filesC/util.o ./filesC/main.o
 
 all: $(TARGETS)
 
-farm : ./filesC/main.o ./filesC/utils.o ./filesC/bst.o ./filesC/ThreadsPool.o ./filesC/collector.o ./filesC/masterWorker.o
+
+
+testAll: 	test testSig
+
+test: 		generafile
+	./test.sh
+
+testSig:	generafile
+	./testSigUsr.sh
+
+generafile: ./source/generafile.c
+	gcc -std=c99 -o $@ $^
+
+farm : $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^
 
-./filesC/masterWorker.o : ./filesC/masterWorker.c
+./source/generafile.o : ./source/generafile.c
 
-./filesC/collector.o : ./filesC/collector.c
+./source/masterWorker.o : ./source/masterWorker.c
 
-./filesC/ThreadsPool.o : ./filesC/ThreadsPool.c
+./source/collector.o : ./source/collector.c
 
-./filesC/main.o : ./filesC/main.c
+./source/ThreadsPool.o : ./source/ThreadsPool.c
 
-./filesC/utils.o : ./filesC/utils.c
+./source/main.o : ./source/main.c
 
-./filesC/bst.o :./filesC/bst.c
+./source/utils.o : ./source/utils.c
+
+./source/bst.o :./source/bst.c
+
+cleanAll: clear cleanExe
 
 clear :
-	-rm ./filesC/*.o
-	-rm farm
+	-rm ./source/*.o
 	-rm *.sck
+
+cleanExe :
+	\rm -f *.dat
+	\rm -r testdir
+	\rm -f generafile
+	\rm -f farm

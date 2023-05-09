@@ -2,7 +2,7 @@
 #define MASTER_H
 
 #include <threadsPool.h>
-#include "threadsPool.h"
+#include "./threadsPool.h"
 #include <signal.h>
 
 extern sigset_t mask;
