@@ -4,14 +4,15 @@
 void *signalHandler(){
 
     int signum,err;
-    while ( 1 ) {
 
+    while ( 1 ) {
         err = sigwait(&mask, &signum);
         if(err != 0) {
             perror("sigwait ");        //sigwait smaschera e si sospende
             exit(EXIT_FAILURE);
         }
         switch(signum) {
+
             case SIGHUP:
             case SIGINT:
             case SIGQUIT:
@@ -23,10 +24,9 @@ void *signalHandler(){
                 printM =1;
                 break;
             default:
-                ;  /* Terminazione */
+                ;
         }
     }
-    pthread_exit(NULL);
 
 
 }

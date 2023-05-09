@@ -22,17 +22,21 @@
             perror ( m ) ;  exit ( EXIT_FAILURE ) ;\
         }\
 }
-/* controlla < 0; stampa errore e termina */
-#define ec_min_zero(s,m) \
- if ( (s) < 0 ) {perror(m); exit(EXIT_FAILURE);}
-/*controlla <= 0;stampa errore e termina */
-#define ec_mu_zero(s,m) \
- if ( s <= 0 ) {perror(m); exit(EXIT_FAILURE);}
-/* controlla NULL; stampa errore e termina (NULL) */
-#define ec_null(s,m) \
- if((s)==NULL) {perror(m); exit(EXIT_FAILURE);}
-/* controlla -1; stampa errore ed esegue c */
-#define ec_meno1_c(s,m,c) \
+#define tutorial(){ \
+        fprintf(stderr,"istruzioni per l'uso del programma farm :\n\n   *inserire una lista di file regolari da analizzare come argomento;\n\n");\
+        fprintf(stderr,"   *opzioni disponibili (selezionabili una sola volta):\n"); \
+        fprintf(stderr,"        -n : permette di specificare il limite massimo (positivo) di threads\n");      \
+        fprintf(stderr,"        -d : permette di specificare una cartella da analizzare\n");      \
+        fprintf(stderr,"        -q : permette di specificare la lunghezza massima (positiva) della coda concorrente\n"); \
+        fprintf(stderr,"        -t : permette di specificare il delay (maggiore o uguale a zero) tra le richieste ai threads\n"); \
+}
+#define MU_ZERO(s,m) \
+ if ( (s) <= 0 ) {perror(m); \
+ tutorial()   \
+ exit(EXIT_FAILURE); \
+ }
+
+#define IS_MENO1(s,m,c) \
  if((s)==-1) {perror(m); c;}
 #define LOCK(l)      if (pthread_mutex_lock(l)!=0)        { \
     fprintf(stderr, "ERRORE FATALE lock\n");		    \
@@ -55,8 +59,9 @@
     pthread_exit((void*)EXIT_FAILURE);						\
   }
 #define ISSET_CODA(s,m) \
-    if ( s != 0 )      { \
-        fprintf(stderr, m);                           \
+    if ( (s) != 0 )      { \
+        fprintf(stderr, m); \
+        tutorial()  \
         return -1;      \
     }
 
@@ -66,7 +71,6 @@ typedef struct mes {
     long val;
 
 }Mes;
-
 
 
 char * valid_name(char * dirname , char * next);

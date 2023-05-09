@@ -2,7 +2,7 @@ CC			=  gcc
 CFLAGS		+= -pedantic -Wall -g
 INCLUDES	= -I ./includes
 TARGETS		= farm
-OBJS        = ./source/main.o ./source/utils.o ./source/bst.o ./source/ThreadsPool.o ./source/collector.o ./source/masterWorker.o
+OBJS        = ./source/main.o ./source/utils.o ./source/ThreadsPool.o ./source/collector.o ./source/masterWorker.o
 
 .PHONY: all clear cleanExe test testSig testClean testAll
 .SUFFIXES: .c .h
@@ -39,8 +39,6 @@ farm : $(OBJS)
 ./source/main.o : ./source/main.c
 
 ./source/utils.o : ./source/utils.c
-
-./source/bst.o :./source/bst.c
 
 cleanAll: clear cleanExe
 

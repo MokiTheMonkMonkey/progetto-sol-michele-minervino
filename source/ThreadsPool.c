@@ -11,7 +11,7 @@ void * sender(void * err) {
 
     e = err;
 
-    ec_meno1_c(fd_sock = socket ( AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(-1) )
+    IS_MENO1(fd_sock = socket (AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(-1) )
 
     struct sockaddr_un sa;
 

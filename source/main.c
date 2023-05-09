@@ -184,14 +184,16 @@ int main (int argc , char* argv[]){
     //inizializzo la coda concorrente
     init_coda_con();
 
-    while((option = getopt(argc,argv,"d:t:n:q:")) != -1){
+    opterr = 0;
+
+    while((option = getopt(argc,argv,":d:t:n:q:")) != -1){
 
         switch(option) {
 
             case 't':
 
-                ISSET_CODA(tCase, "delay inseribile una sola volta")
-                ec_mu_zero( (tCase = isNumber ( optarg )) , "inserire un delay positivo")
+                ISSET_CODA(tCase, "delay inseribile una sola volta\n")
+                MU_ZERO((tCase = isNumber (optarg )) , "inserire un delay positivo")
 
                 //converto il tCase in secondi
                 coda_concorrente.delay -> tv_sec = tCase / 1000;
@@ -203,23 +205,23 @@ int main (int argc , char* argv[]){
 
             case 'n':
 
-                ISSET_CODA(nCase , "numero di threads inseribile un sola volta")
+                ISSET_CODA(nCase , "numero di threads inseribile un sola volta\n")
                 nCase = 1;
-                ec_mu_zero((coda_concorrente.th_number = isNumber(optarg)),"inserire un numero di thread maggiore di zero" )
+                MU_ZERO((coda_concorrente.th_number = isNumber(optarg)), "inserire un numero di thread maggiore di zero" )
 
                 break;
 
             case 'q':
 
-                ISSET_CODA(qCase, "limite coda concorrente inseribile una sola volta")
+                ISSET_CODA(qCase, "limite coda concorrente inseribile una sola volta\n")
                 qCase = 1;
-                ec_mu_zero((coda_concorrente.lim = isNumber(optarg)) , "inserire un limite queque maggiore di zero" )
+                MU_ZERO((coda_concorrente.lim = isNumber(optarg)) , "inserire un limite queque maggiore di zero" )
 
                 break;
 
             case 'd':
 
-                ISSET_CODA(d_Case , "inseririe solo una cartella da analizzare" )
+                ISSET_CODA(d_Case , "inseririe solo una cartella da analizzare\n" )
                 d_Case = 1;
                 size_t dirLen = strnlen(optarg,MAX_NAME) + 1;
                 dir_name = s_malloc(dirLen);
@@ -227,25 +229,23 @@ int main (int argc , char* argv[]){
 
                 break;
 
+            case ':':
             case '?':
-
-                fprintf(stderr,"opzione %c non valida",option);
-                exit( 1 );
-
             default:
 
-                fprintf(stderr,"inserie opzione valida");
+                fprintf(stderr,"inserie opzione valida\n");
+                tutorial()
                 exit( 1 );
 
         }
 
     }
 
-
     //non sono stati inseriti file o cartelle tra gli argomenti
     if(optind == argc && !d_Case){
 
         fprintf( stderr, "nessuna cartella o file da analizzare.\n" );
+        tutorial()
         exit ( 1 );
 
     }
@@ -255,7 +255,7 @@ int main (int argc , char* argv[]){
      * creo il processo collector
      *
      */
-    ec_meno1_c( pid = fork() , "errore fork :" , exit ( 1 ) )
+    IS_MENO1(pid = fork() , "errore fork :" , exit (1 ) )
 
     if(pid == 0){
 
@@ -278,8 +278,7 @@ int main (int argc , char* argv[]){
 
         if((r_sock = sock_connect()) == -1 ){
 
-
-            //gestione errori con eventuale unlink
+            perror("Master connect ");
             return -1;
 
         }
@@ -287,18 +286,18 @@ int main (int argc , char* argv[]){
         while(1) {
 
 
+            //leggo la lunghezza della stringa da leggere o eventuali segnali
             if (read(r_sock, &r_bites, sizeof(size_t)) == -1) {
 
-
-                //gestione errori con unlink e messaggio al master
                 return -1;
 
             }
+            //messaggio di terminazione
             if (r_bites == -2)
 
                 break;
 
-
+            //richiesta di stampa
             if(r_bites == -3){
 
                 printTree(tree);
@@ -306,15 +305,16 @@ int main (int argc , char* argv[]){
             }
             else {
 
+
                 if (r_bites <= 0)
 
                     return -1;
 
+                //alloco spazio per il nome del file
                 message.nome = s_malloc(r_bites);
 
                 if (readn(r_sock, message.nome, r_bites) == -1) {
 
-                    //gestione errorri con unlink messaggio al master
 
                     return -1;
 
@@ -339,7 +339,8 @@ int main (int argc , char* argv[]){
             }
 
         }
-        ec_meno1_c(unlink(SOCK_NAME) , "unlink :" ,return -1)
+        IS_MENO1(close(r_sock) , "close :" , return -1)
+        IS_MENO1(unlink(SOCK_NAME) , "unlink :" , return -1)
         printTree(tree);
 
         return 0;
