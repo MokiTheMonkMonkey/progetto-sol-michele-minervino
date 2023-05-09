@@ -14,12 +14,12 @@ typedef struct treeNode{
 
 }TreeNode;
 
-extern TreeNode * tree;
+extern TreeNode * B_S_Tree;
 
 
 void collectorExitFun();
 
-int sock_connect();
+int sock_create();
 
 void printTree (TreeNode * cTree);
 

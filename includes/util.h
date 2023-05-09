@@ -1,5 +1,8 @@
 #if  !defined(UTIL_H)
 #define UTIL_H
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <sys/socket.h>
 #include <sys/un.h>

@@ -1,5 +1,317 @@
+
 #include <threadsPool.h>
 #include "./../includes/threadsPool.h"
+
+
+/*
+ * funzione per inserire in coda
+ * */
+int insert_coda_con(char * nomeFile){
+
+
+    LOCK(&coda_mutex)
+
+    while(!is_set_coda_cond && coda_concorrente.curr == coda_concorrente.lim && !signExit){
+
+        //coda troppo piena aspetto che si svuoti
+        WAIT(&coda_cond,&coda_mutex)
+
+    }
+
+    if(signExit){
+
+        no_more_files = 1;
+        SIGNAL(&coda_cond)
+        UNLOCK(&coda_mutex)
+
+        return 0;
+
+    }
+
+    if(!coda_concorrente.coda){
+
+
+        //non ci sono nodi quindi inserisco il primo
+        coda_concorrente.coda = s_malloc(sizeof(NodoCoda));
+        coda_concorrente.coda -> dim = strnlen ( nomeFile , MAX_NAME) + 1;
+        coda_concorrente.coda -> nome = s_malloc(coda_concorrente.coda->dim);
+        strncpy(coda_concorrente.coda -> nome , nomeFile , coda_concorrente.coda -> dim);
+        coda_concorrente.coda -> next = NULL;
+        coda_concorrente.last = coda_concorrente.coda;
+
+    }
+    else{
+
+        //ci sono nodi quindi appendo all'ultimo
+        NodoCoda * nuovoNodo = NULL;
+
+        nuovoNodo = s_malloc(sizeof(NodoCoda));
+        nuovoNodo -> dim = strnlen ( nomeFile , MAX_NAME) + 1;
+        nuovoNodo -> nome = s_malloc((nuovoNodo)->dim);
+        nuovoNodo -> next = NULL;
+        strncpy((nuovoNodo) -> nome , nomeFile , (nuovoNodo) -> dim);
+        coda_concorrente.last -> next = nuovoNodo;
+        coda_concorrente.last = nuovoNodo;
+
+    }
+    //aggiorno la quantità di nodi presenti
+    coda_concorrente.curr++;
+
+    SIGNAL(&coda_cond)
+
+    UNLOCK(&coda_mutex)
+
+    return 0;
+
+}
+
+
+
+/*
+ * pop della coda concorrente
+ * */
+char * pop_Coda_Con(){
+
+    NodoCoda * coda_next = NULL;
+
+    LOCK(&coda_mutex)
+
+
+    //aspetto che la coda si riempia o che arrivi il messaggio di teminazione
+    while(!coda_concorrente.curr && !no_more_files){
+
+        WAIT(&coda_cond,&coda_mutex)
+
+    }
+
+
+    //se il messaggio di terminazione e' arrivato ritorno null
+    if(no_more_files && !coda_concorrente.curr){
+
+
+        BCAST(&coda_cond)
+        UNLOCK(&coda_mutex)
+        return NULL;
+
+    }
+
+
+    char * fileName = s_malloc(coda_concorrente.coda->dim);
+
+    if(--coda_concorrente.curr == 0){
+
+        (coda_concorrente.last) = NULL;
+
+    }
+    else{
+
+        coda_next = (coda_concorrente.coda) -> next;
+
+    }
+
+
+    strncpy(fileName,coda_concorrente.coda -> nome,coda_concorrente.coda -> dim);
+
+
+    free((coda_concorrente.coda) -> nome);
+    free(coda_concorrente.coda);
+
+    (coda_concorrente.coda) = coda_next;
+
+    if(!strncmp(fileName , "quit" , 4)){
+
+        no_more_files = 1;
+        BCAST( &coda_cond )
+        UNLOCK(&coda_mutex)
+        return fileName;
+
+    }
+
+    SIGNAL( &coda_cond )
+    UNLOCK( &coda_mutex )
+
+    return fileName;
+
+}
+
+
+/*
+ * inserimento in coda messaggi
+ * */
+void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * Ins){
+
+    Ins -> next = NULL;
+
+    LOCK(&mes_list_mutex)
+
+
+    //caso base, la lista e' vuota
+    if(*lista == NULL){
+
+        *lista = Ins;
+        *last = *lista;
+
+        SIGNAL(&mes_list_cond)
+        UNLOCK(&mes_list_mutex)
+        return;
+
+
+    }
+    //c'e' almeno un nodo
+    (*last) -> next = Ins;
+    (*last) = (*last) -> next;
+
+    if(!strncmp(Ins -> msg -> nome , "quit" , 4)){
+
+        end_list = 1;
+
+    }
+
+    SIGNAL(&mes_list_cond)
+    UNLOCK(&mes_list_mutex)
+
+}
+
+
+/*
+ * funzione che fa la pop della coda messaggi
+ * */
+Mes * popListMes (){
+
+    LOCK(&mes_list_mutex)
+
+    while (!(Coda_Mes_ptr) && !end_list){
+
+
+        WAIT ( &mes_list_cond , &mes_list_mutex )
+
+    }
+
+    if(!(Coda_Mes_ptr)){
+
+        SIGNAL(&mes_list_cond)
+        UNLOCK(&mes_list_mutex)
+        return NULL;
+
+    }
+
+    if(!strncmp(Coda_Mes_ptr -> msg -> nome , "quit" , 4 )){
+
+        free(Coda_Mes_ptr -> msg -> nome);
+        free(Coda_Mes_ptr -> msg);
+        free(Coda_Mes_ptr);
+        Coda_Mes_ptr = NULL;
+        end_list = 1;
+
+        SIGNAL(&mes_list_cond)
+        UNLOCK(&mes_list_mutex)
+
+        return NULL;
+
+    }
+    Nodo_Lista_Mes * next = (Coda_Mes_ptr) -> next;
+
+    size_t len = strnlen(Coda_Mes_ptr -> msg -> nome, MAX_NAME) + 1;
+    Mes * ret = s_malloc(sizeof(Mes));
+    ret -> nome = s_malloc(len);
+    strncpy(ret -> nome , (Coda_Mes_ptr) -> msg -> nome , len  );
+    ret -> val = (Coda_Mes_ptr) -> msg -> val;
+
+    free((Coda_Mes_ptr) -> msg -> nome);
+    free( (Coda_Mes_ptr) -> msg);
+    free(Coda_Mes_ptr);
+
+    (Coda_Mes_ptr) = next;
+    if(next == NULL){
+
+        (last_Mes_Ptr) = NULL;
+
+    }
+
+    SIGNAL(&mes_list_cond)
+    UNLOCK(&mes_list_mutex)
+
+    return ret;
+
+}
+
+/*
+ * funzione invocata dai threads che fa il calcolo del file
+ * e inserisce in coda mesaggi
+ * */
+int worker_Fun(void* filepath){
+
+    //dichiaro le variabili
+    char * filePath = (char*) filepath;
+
+    if(!strncmp(filePath,"quit",4)){
+
+        return 0;
+
+    }
+    FILE * fd = NULL;
+    long int i,lBuf,retValue;
+
+    size_t filePathLen = strnlen(filePath , MAX_NAME) + 1;
+
+    //apro il file
+    if((fd = fopen (filePath , "r")) == NULL){
+
+        perror("fopen :");
+        return -1;
+
+    }
+
+    retValue = 0;
+    i=0;
+    //calcolo il valore
+    while(fread (&lBuf , sizeof (long int) ,1,fd) != sizeof(long int) && !feof(fd)){
+
+        retValue += lBuf * (i++);
+
+    }
+    //se si è interrotto per motivi diversi da EOF
+    if(!feof (fd)){
+
+        if(fclose (fd) == EOF){
+
+            int err = errno;
+            perror("fclose :");
+            exit(err);
+
+        }
+        perror ("thread fread :");
+        return -2;
+
+    }
+
+    //chiudo il file
+
+    if((errno = 0),fclose (fd) == EOF){
+
+        int err = errno;
+        perror("fclose :");
+        exit(err);
+
+    }
+
+
+    //creo il nuovo nodo
+    Nodo_Lista_Mes * nuovo = NULL;
+    nuovo = s_malloc(sizeof(NodoCoda));
+    nuovo -> msg = s_malloc(sizeof(Mes));
+    nuovo -> msg -> nome = s_malloc(filePathLen);
+    strncpy (nuovo -> msg -> nome , filePath , filePathLen);
+    nuovo -> msg -> val = retValue;
+    free(filepath);
+
+    //inserisco il nodo in lista
+    insertCoda (&Coda_Mes_ptr , &last_Mes_Ptr , nuovo);
+
+    return 0;
+
+}
+
 
 
 /*
@@ -152,244 +464,6 @@ void * sender(void * err) {
 
 }
 
-/*
- * inserimento in coda messaggi
- * */
-void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * Ins){
-
-    Ins -> next = NULL;
-
-    LOCK(&mes_list_mutex)
-
-
-    //caso base, la lista e' vuota
-    if(*lista == NULL){
-
-        *lista = Ins;
-        *last = *lista;
-
-        SIGNAL(&mes_list_cond)
-        UNLOCK(&mes_list_mutex)
-        return;
-
-
-    }
-    //c'e' almeno un nodo
-    (*last) -> next = Ins;
-    (*last) = (*last) -> next;
-
-    if(!strncmp(Ins -> msg -> nome , "quit" , 4)){
-
-        end_list = 1;
-
-    }
-
-    SIGNAL(&mes_list_cond)
-    UNLOCK(&mes_list_mutex)
-
-}
-
-
-/*
- * funzione per inserire in coda
- * */
-int insert_coda_con(char * nomeFile){
-
-
-    LOCK(&coda_mutex)
-
-    if(nanosleep(coda_concorrente.delay, NULL ) == -1){
-
-        perror( "errore nella nanosleep" );
-        return -1;
-
-    }
-
-    while(!is_set_coda_cond && coda_concorrente.curr == coda_concorrente.lim){
-
-        //coda troppo piena aspetto che si riempia
-        WAIT(&coda_cond,&coda_mutex)
-
-    }
-
-
-    if(!coda_concorrente.coda){
-
-
-        //non ci sono nodi quindi inserisco il primo
-        coda_concorrente.coda = s_malloc(sizeof(NodoCoda));
-        coda_concorrente.coda -> dim = strnlen ( nomeFile , MAX_NAME) + 1;
-        coda_concorrente.coda -> nome = s_malloc(coda_concorrente.coda->dim);
-        strncpy(coda_concorrente.coda -> nome , nomeFile , coda_concorrente.coda -> dim);
-        coda_concorrente.coda -> next = NULL;
-        coda_concorrente.last = coda_concorrente.coda;
-
-    }
-    else{
-
-        //ci sono nodi quindi appendo all'ultimo
-        NodoCoda * nuovoNodo = NULL;
-
-        nuovoNodo = s_malloc(sizeof(NodoCoda));
-        nuovoNodo -> dim = strnlen ( nomeFile , MAX_NAME) + 1;
-        nuovoNodo -> nome = s_malloc((nuovoNodo)->dim);
-        nuovoNodo -> next = NULL;
-        strncpy((nuovoNodo) -> nome , nomeFile , (nuovoNodo) -> dim);
-        coda_concorrente.last -> next = nuovoNodo;
-        coda_concorrente.last = nuovoNodo;
-
-    }
-    //aggiorno la quantità di nodi presenti
-    coda_concorrente.curr++;
-
-    SIGNAL(&coda_cond)
-
-    UNLOCK(&coda_mutex)
-
-    return 0;
-
-}
-
-char * pop_Coda_Con(){
-
-    NodoCoda * coda_next = NULL;
-
-    LOCK(&coda_mutex)
-
-
-    //aspetto che la coda si riempia o che arrivi il messaggio di teminazione
-    while(!coda_concorrente.curr && !no_more_files){
-
-        WAIT(&coda_cond,&coda_mutex)
-
-    }
-
-    //se il messaggio di terminazione e' arrivato ritorno null
-    if(no_more_files && !coda_concorrente.curr){
-
-
-        BCAST(&coda_cond)
-        UNLOCK(&coda_mutex)
-        return NULL;
-
-    }
-
-
-    char * fileName = s_malloc(coda_concorrente.coda->dim);
-
-    if(--coda_concorrente.curr == 0){
-
-        (coda_concorrente.last) = NULL;
-
-    }
-    else{
-
-        coda_next = (coda_concorrente.coda) -> next;
-
-    }
-
-
-    strncpy(fileName,coda_concorrente.coda -> nome,coda_concorrente.coda -> dim);
-
-
-    free((coda_concorrente.coda) -> nome);
-    free(coda_concorrente.coda);
-
-    (coda_concorrente.coda) = coda_next;
-
-    if(!strncmp(fileName , "quit" , 4)){
-
-        no_more_files = 1;
-        BCAST( &coda_cond )
-        UNLOCK(&coda_mutex)
-        return fileName;
-
-    }
-
-    SIGNAL( &coda_cond )
-    UNLOCK( &coda_mutex )
-
-    return fileName;
-
-}
-
-
-
-
-
-int worker_Fun(void* filepath){
-
-    //dichiaro le variabili
-    char * filePath = (char*) filepath;
-
-    if(!strncmp(filePath,"quit",4)){
-
-        return 0;
-
-    }
-    FILE * fd = NULL;
-    long int i,lBuf,retValue;
-
-    size_t filePathLen = strnlen(filePath , MAX_NAME) + 1;
-
-    //apro il file
-    if((fd = fopen (filePath , "r")) == NULL){
-
-        perror("fopen :");
-        return -1;
-
-    }
-
-    retValue = 0;
-    i=0;
-    //calcolo il valore
-    while(fread (&lBuf , sizeof (long int) ,1,fd) != sizeof(long int) && !feof(fd)){
-
-        retValue += lBuf * (i++);
-
-    }
-    //se si è interrotto per motivi diversi da EOF
-    if(!feof (fd)){
-
-        if(fclose (fd) == EOF){
-
-            int err = errno;
-            perror("fclose :");
-            exit(err);
-
-        }
-        perror ("thread fread :");
-        return -2;
-
-    }
-
-    //chiudo il file
-
-    if((errno = 0),fclose (fd) == EOF){
-
-        int err = errno;
-        perror("fclose :");
-        exit(err);
-
-    }
-
-
-    //creo il nuovo nodo
-    Nodo_Lista_Mes * nuovo = NULL;
-    nuovo = s_malloc(sizeof(NodoCoda));
-    nuovo -> msg = s_malloc(sizeof(Mes));
-    nuovo -> msg -> nome = s_malloc(filePathLen);
-    strncpy (nuovo -> msg -> nome , filePath , filePathLen);
-    nuovo -> msg -> val = retValue;
-    free(filepath);
-
-    //inserisco il nodo in lista
-    insertCoda (&l_Proc_Ptr , &last_Proc_Ptr , nuovo);
-
-    return 0;
-
-}
-
 
 /*
  * funzione worker che prende dalla coda concorrente e chiama la workerFun
@@ -443,7 +517,7 @@ void * worker(){
                 strncpy (ultimo -> msg -> nome , "quit" , 5);
                 ultimo -> msg -> val = MAXLONG;
 
-                insertCoda (&l_Proc_Ptr , &last_Proc_Ptr ,  ultimo );
+                insertCoda (&Coda_Mes_ptr , &last_Mes_Ptr , ultimo );
 
                 return NULL;
 
@@ -460,65 +534,5 @@ void * worker(){
 
     }
 
-
-}
-
-
-Mes * popListMes (){
-
-    LOCK(&mes_list_mutex)
-
-    while (!(l_Proc_Ptr) && !end_list){
-
-
-        WAIT ( &mes_list_cond , &mes_list_mutex )
-
-    }
-
-    if(!(l_Proc_Ptr)){
-
-        SIGNAL(&mes_list_cond)
-        UNLOCK(&mes_list_mutex)
-        return NULL;
-
-    }
-
-    if(!strncmp( l_Proc_Ptr -> msg -> nome , "quit" , 4 )){
-
-        free(l_Proc_Ptr -> msg -> nome);
-        free(l_Proc_Ptr -> msg);
-        free(l_Proc_Ptr);
-        l_Proc_Ptr = NULL;
-        end_list = 1;
-
-        SIGNAL(&mes_list_cond)
-        UNLOCK(&mes_list_mutex)
-
-        return NULL;
-
-    }
-    Nodo_Lista_Mes * next = (l_Proc_Ptr) -> next;
-
-    size_t len = strnlen(l_Proc_Ptr -> msg -> nome, MAX_NAME) + 1;
-    Mes * ret = s_malloc(sizeof(Mes));
-    ret -> nome = s_malloc(len);
-    strncpy( ret -> nome , (l_Proc_Ptr) -> msg -> nome , len  );
-    ret -> val = (l_Proc_Ptr) -> msg -> val;
-
-    free((l_Proc_Ptr) -> msg -> nome);
-    free( (l_Proc_Ptr) -> msg);
-    free(l_Proc_Ptr);
-
-    (l_Proc_Ptr) = next;
-    if(next == NULL){
-
-        (last_Proc_Ptr) = NULL;
-
-    }
-
-    SIGNAL(&mes_list_cond)
-    UNLOCK(&mes_list_mutex)
-
-    return ret;
 
 }

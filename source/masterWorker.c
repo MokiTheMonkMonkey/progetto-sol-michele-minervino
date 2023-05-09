@@ -1,60 +1,87 @@
 #include <masterWorker.h>
 #include "./../includes/masterWorker.h"
 
+
+/*
+ * signal handler
+ * */
 void *signalHandler(){
 
     int signum,err;
 
     while ( 1 ) {
+
+        //aspetto i segnali
         err = sigwait(&mask, &signum);
+
         if(err != 0) {
+
             perror("sigwait ");        //sigwait smaschera e si sospende
             exit(EXIT_FAILURE);
+
         }
+
+        //controllo qual' e' il segnale
         switch(signum) {
 
             case SIGHUP:
             case SIGINT:
             case SIGQUIT:
             case SIGTERM:
+
                 signExit = 1;
                 pthread_exit(NULL);
+
             case SIGUSR1:
 
                 printM =1;
                 break;
+
             default:
                 ;
-        }
-    }
 
+        }
+
+    }
 
 }
 
+/*
+ * funzione che maschera i segnali
+ * */
 int signalMask(){
 
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN;
+
+    //ignoro il SIGPIPE
     if(sigaction(SIGPIPE,&sa, NULL) == -1) {
         perror("[MASTERWORKER] sigaction SIGPIPE");
         return -1;
     }
+
     sigemptyset(&mask);
     sigaddset(&mask, SIGHUP);   // aggiunto SIGHUP alla maschera
     sigaddset(&mask, SIGINT);   // aggiunto SIGINT alla maschera
     sigaddset(&mask, SIGQUIT);  // aggiunto SIGQUIT alla maschera
     sigaddset(&mask, SIGTERM);  // aggiunto SIGTERM alla maschera
     sigaddset(&mask, SIGUSR1);  // aggiunto SIGUSR1 alla maschera
+    //maschero i segnali
     if(pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0) {
+
         perror("[MASTERWORKER] pthread_sigmask");
         return -1;
+
     }
 
     return 0;
 
 }
 
+/*
+ * funzione di terminazione del master
+ * */
 void masterExitFun(){
 
     free(coda_concorrente.delay);
@@ -74,11 +101,11 @@ void masterExitFun(){
 
     Nodo_Lista_Mes * next_mes = NULL;
 
-    while(l_Proc_Ptr){
+    while(Coda_Mes_ptr){
 
-        next_mes = l_Proc_Ptr -> next;
-        free(l_Proc_Ptr);
-        l_Proc_Ptr = next_mes;
+        next_mes = Coda_Mes_ptr -> next;
+        free(Coda_Mes_ptr);
+        Coda_Mes_ptr = next_mes;
 
     }
 

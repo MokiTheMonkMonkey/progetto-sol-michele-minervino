@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <util.h>
 #include <threadsPool.h>
 #include <collector.h>
@@ -12,28 +14,35 @@
 #include <dirent.h>
 
 //variabili globali
-
 int is_set_coda_cond = 0 ,end_list = 0, no_more_files = 0;
 long terMes;
 
+//maschera per i segnali
 sigset_t mask;
 
+//variabili atomiche per il signal handler
 volatile sig_atomic_t  signExit = 0,printM = 0;
 
+//strutture dati : coda_concorrente , coda messaggi e albero binario di ricerca
 CodaCon coda_concorrente;
-Nodo_Lista_Mes * l_Proc_Ptr = NULL;
-Nodo_Lista_Mes * last_Proc_Ptr = NULL;
-TreeNode * tree = NULL;
+Nodo_Lista_Mes * Coda_Mes_ptr = NULL;
+Nodo_Lista_Mes * last_Mes_Ptr = NULL;
+TreeNode * B_S_Tree = NULL;
 
+//mutex per : messaggio di terminazione, coda_messaggi e coda_concorrente
 pthread_mutex_t ter_mes_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mes_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+//condizioni per : lista messaggi e coda concorrente
 pthread_cond_t mes_list_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
 
-void cerca_File_Regolari( char * dirName ){
 
+/*
+ * ricerca ricorsivamente e inserisce file regolari dalla cartella
+ * */
+void cerca_File_Regolari( char * dirName ){
 
     if(dirName == NULL){
 
@@ -42,8 +51,11 @@ void cerca_File_Regolari( char * dirName ){
     }
     struct stat d_stat;
     DIR * dir = NULL;
+
     errno = 0;
-    if((dir = opendir(dirName)) == NULL && !terMes){
+    //apro la cartella
+    if((dir = opendir(dirName)) == NULL || signExit ){
+
 
         if( errno != 0){
 
@@ -53,10 +65,25 @@ void cerca_File_Regolari( char * dirName ){
 
         }
 
+        if(signExit){
+
+            if(closedir(dir) != 0){
+
+                fprintf(stderr,"errore closedir : %s\n",dirName);
+
+            }
+
+            return;
+
+        }
+
+
     }
 
     struct dirent * info;
     char * file_name = NULL;
+
+    //finche' la cartella non è vuota,si veirfica un errore o non viene mandato il segnale SIGINT
     while( ( errno = 0 ) , (( info = readdir(dir)) != NULL && !signExit) ){
 
         if( !( file_name = valid_name ( dirName , info -> d_name ) ) ){
@@ -71,9 +98,9 @@ void cerca_File_Regolari( char * dirName ){
             exit(2);
 
         }
-        else if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){
+        else if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){//controllo che non siano le cartelle "." o ".."
 
-
+            //controllo se il file e' regolare
             if (S_ISREG(d_stat.st_mode)) {
 
                 insert_coda_con( file_name );
@@ -120,14 +147,16 @@ void cerca_File_Regolari( char * dirName ){
 
     }
 
-
 }
 
+/*
+ * funzione che inserisce i file da argv
+ * */
 char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
 
 
     struct stat c_stat;
-    while(OptInd < argc){
+    while( !signExit && OptInd < argc  ){
 
         if(strnlen(argv[OptInd],MAX_NAME) == MAX_NAME && argv[OptInd][MAX_NAME] != '\0'){
 
@@ -141,7 +170,7 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
 
         }
         else {
-            if (S_ISREG(c_stat.st_mode)) {
+            if (S_ISREG(c_stat.st_mode) && !signExit) {
 
                 insert_coda_con(argv[OptInd++]);
 
@@ -186,6 +215,7 @@ int main (int argc , char* argv[]){
 
     opterr = 0;
 
+    //controllo le opzioni
     while((option = getopt(argc,argv,":d:t:n:q:")) != -1){
 
         switch(option) {
@@ -251,10 +281,16 @@ int main (int argc , char* argv[]){
     }
 
     int pid;
+
+    //maschero i segnali per entrambi i processi
+    signalMask();
+
     /*
      * creo il processo collector
      *
      */
+
+
     IS_MENO1(pid = fork() , "errore fork :" , exit (1 ) )
 
     if(pid == 0){
@@ -264,7 +300,6 @@ int main (int argc , char* argv[]){
          *collector
          * */
 
-        signalMask();
 
         //libero la memoria allocata nel vecchio processo
         free(dir_name);
@@ -276,7 +311,7 @@ int main (int argc , char* argv[]){
         size_t r_bites = 0;
         Mes message;
 
-        if((r_sock = sock_connect()) == -1 ){
+        if((r_sock = sock_create()) == -1 ){
 
             perror("Master connect ");
             return -1;
@@ -300,7 +335,7 @@ int main (int argc , char* argv[]){
             //richiesta di stampa
             if(r_bites == -3){
 
-                printTree(tree);
+                printTree(B_S_Tree);
 
             }
             else {
@@ -333,7 +368,7 @@ int main (int argc , char* argv[]){
                     exit(3);
                 }
 
-                insTree(message, &tree);
+                insTree(message, &B_S_Tree);
                 free(message.nome);
 
             }
@@ -341,7 +376,7 @@ int main (int argc , char* argv[]){
         }
         IS_MENO1(close(r_sock) , "close :" , return -1)
         IS_MENO1(unlink(SOCK_NAME) , "unlink :" , return -1)
-        printTree(tree);
+        printTree(B_S_Tree);
 
         return 0;
 
@@ -357,16 +392,12 @@ int main (int argc , char* argv[]){
 
     atexit(&masterExitFun);
 
-    signalMask();
-
     pthread_create(&signalH,NULL, signalHandler,NULL);
 
     //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
     set_standard_coda_con();
 
     int e = 0;
-
-
 
     /*
      * faccio partire i threads prima di mettere in coda i file singoli
@@ -416,7 +447,7 @@ int main (int argc , char* argv[]){
     if(pthread_join( send , NULL ) != 0){
 
         //gestione errori e free
-        exit(2);
+        exit(e);
 
     }
 

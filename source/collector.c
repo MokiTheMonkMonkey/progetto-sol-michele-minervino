@@ -1,19 +1,24 @@
 #include <collector.h>
 #include "./../includes/collector.h"
 
-
+/*
+ * funzione di uscita che chiama la liberazione dell'albero
+ * */
 void collectorExitFun(){
 
-    freeTree(tree);
+    freeTree(B_S_Tree);
 
 }
 
-int sock_connect(){
+
+/*
+ * creazione della socket dalla parte del collector
+ * */
+int sock_create(){
 
     int fd_sock , cfd;
 
     struct sockaddr_un sa;
-
 
     IS_MENO1(fd_sock = socket(AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket :" , return -1 )
 
@@ -32,8 +37,13 @@ int sock_connect(){
     return cfd;
 
 }
+
+/*
+ * funzione per l'inserimento nell'albero binario di ricerca
+ * */
 void insTree(Mes nodoIns,TreeNode ** cTree) {
 
+    //caso base l'albero e' vuoto
     if(*cTree == NULL){
 
         *cTree = s_malloc(sizeof(TreeNode));
@@ -46,12 +56,14 @@ void insTree(Mes nodoIns,TreeNode ** cTree) {
         return;
 
     }
+    //in caso il nuovo nodo sia minore, del corrente
     if((*cTree) -> val < nodoIns . val){
 
         insTree(nodoIns , &((*cTree) -> right));
 
     }
     else{
+        //caso nuovo nodo >= nodo corrente
 
         insTree(nodoIns,&((*cTree) -> left));
 
@@ -60,6 +72,10 @@ void insTree(Mes nodoIns,TreeNode ** cTree) {
 
 }
 
+
+/*
+ * funzione che deallocare albero
+ * */
 void freeTree(TreeNode * cTree){
 
     if(!cTree){
@@ -82,7 +98,9 @@ void freeTree(TreeNode * cTree){
 
 }
 
-
+/*
+ * funzione per stampare l'albero corrente
+ * */
 void printTree (TreeNode * cTree){
 
     if(!cTree){

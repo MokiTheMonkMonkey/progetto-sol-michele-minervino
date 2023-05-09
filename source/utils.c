@@ -56,6 +56,7 @@ long isNumber(const char* s) {
 
     char* e = NULL;
     errno = 0;
+
     long val = strtol(s, &e, 0);
     if(errno == ERANGE){
 

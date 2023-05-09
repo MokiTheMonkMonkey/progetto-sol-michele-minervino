@@ -1,5 +1,8 @@
 #ifndef THREADS_POOL
 #define THREADS_POOL
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <pthread.h>
 #include <sys/types.h>
@@ -8,7 +11,7 @@
 #include <util.h>
 #include "util.h"
 
-extern volatile sig_atomic_t signExit, printM;
+extern volatile __sig_atomic_t signExit, printM;
 
 typedef struct nodoLista{//Typo lista di messaggi
 
@@ -44,8 +47,8 @@ extern long terMes;
 
 //coda concorrente e lista di messaggi
 extern CodaCon coda_concorrente;
-extern Nodo_Lista_Mes * l_Proc_Ptr;
-extern Nodo_Lista_Mes * last_Proc_Ptr;
+extern Nodo_Lista_Mes * Coda_Mes_ptr;
+extern Nodo_Lista_Mes * last_Mes_Ptr;
 
 //mutex
 extern pthread_mutex_t ter_mes_mutex;
