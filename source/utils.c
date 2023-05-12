@@ -1,5 +1,4 @@
 #include <util.h>
-#include "./../includes/util.h"
 
 /*
  * funzione che concatena due stringhe se e solo se
@@ -78,7 +77,7 @@ long isNumber(const char* s) {
  * anche se la write venisse interrotta da eventuali segnagli
  * */
 
-size_t readn(long fd, void *buf, size_t size) {
+size_t read_n(long fd, void *buf, size_t size) {
     size_t left = size;
     long r;
     char *bufptr = (char*)buf;
@@ -102,7 +101,7 @@ size_t readn(long fd, void *buf, size_t size) {
  * funzione per scrivere size bytes
  * anche se la write venisse interrotta da eventuali segnagli
  * */
-size_t writen(int fd, void *buf, size_t size) {
+size_t write_n(int fd, void *buf, size_t size) {
 
     size_t left = size;
     long r;
@@ -111,7 +110,7 @@ size_t writen(int fd, void *buf, size_t size) {
 
         if ((r=write((int)fd ,buf_ptr,left)) == -1) {
 
-            perror("writen");
+            perror("write_n");
             return -1;
 
         }
@@ -119,8 +118,8 @@ size_t writen(int fd, void *buf, size_t size) {
 
             return 0;
 
-        left    -= r;
-        buf_ptr  += r;
+        left -= r;
+        buf_ptr += r;
 
     }
     return 1;

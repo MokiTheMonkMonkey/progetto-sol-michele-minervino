@@ -1,5 +1,29 @@
 #include <collector.h>
-#include "./../includes/collector.h"
+
+/*
+ * funzione che deallocare albero
+ * */
+void freeTree(TreeNode * cTree){
+
+    if(!cTree){
+
+        return;
+
+    }
+    if(cTree -> left){
+
+        freeTree(cTree -> left);
+
+    }
+    if(cTree -> right){
+
+        freeTree(cTree -> right);
+
+    }
+    free(cTree -> fileName);
+    free(cTree);
+
+}
 
 /*
  * funzione di uscita che chiama la liberazione dell'albero
@@ -20,7 +44,7 @@ int sock_create(){
 
     struct sockaddr_un sa;
 
-    IS_MENO1(fd_sock = socket(AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket :" , return -1 )
+    IS_MENO1(fd_sock = socket(AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket :" , exit(EXIT_FAILURE) )
 
 
     memset(&sa, '\0' , sizeof(sa));
@@ -28,11 +52,11 @@ int sock_create(){
     strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
     sa.sun_family = AF_UNIX;
 
-    IS_MENO1 (bind(fd_sock , (struct sockaddr *) &sa , sizeof(sa)) , "errore bind :" , return -1 )
+    IS_MENO1 (bind(fd_sock , (struct sockaddr *) &sa , sizeof(sa)) , "errore bind :" , exit(EXIT_FAILURE) )
 
-    IS_MENO1 (listen (fd_sock , SOMAXCONN) , "errore listen :", return -1 )
+    IS_MENO1 (listen (fd_sock , SOMAXCONN) , "errore listen :", exit(EXIT_FAILURE) )
 
-    IS_MENO1 (cfd = accept (fd_sock , 0 , NULL ) , "errore accept :" , return -1)
+    IS_MENO1 (cfd = accept (fd_sock , 0 , NULL ) , "errore accept :" , exit(EXIT_FAILURE))
 
     return cfd;
 
@@ -72,31 +96,6 @@ void insTree(Mes nodoIns,TreeNode ** cTree) {
 
 }
 
-
-/*
- * funzione che deallocare albero
- * */
-void freeTree(TreeNode * cTree){
-
-    if(!cTree){
-
-        return;
-
-    }
-    if(cTree -> left){
-
-        freeTree(cTree -> left);
-
-    }
-    if(cTree -> right){
-
-        freeTree(cTree -> right);
-
-    }
-    free(cTree -> fileName);
-    free(cTree);
-
-}
 
 /*
  * funzione per stampare l'albero corrente

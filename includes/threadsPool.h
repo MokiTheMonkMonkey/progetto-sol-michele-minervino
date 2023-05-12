@@ -9,9 +9,9 @@
 #include <values.h>
 
 #include <util.h>
-#include "util.h"
 
 extern volatile __sig_atomic_t signExit, printM;
+
 
 typedef struct nodoLista{//Typo lista di messaggi
 
@@ -42,8 +42,8 @@ typedef struct codaCon{//coda concorrente
 
 //variabili condivise
 
-extern int is_set_coda_cond,end_list,no_more_files;
-extern long terMes;
+extern int terMes,is_set_coda_con,end_list,no_more_files;
+
 
 //coda concorrente e lista di messaggi
 extern CodaCon coda_concorrente;
@@ -59,15 +59,15 @@ extern pthread_mutex_t coda_mutex;
 extern pthread_cond_t mes_list_cond;
 extern pthread_cond_t coda_cond;
 
-void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes * ins);
+void insert_Coda_Mes(Nodo_Lista_Mes **lista, Nodo_Lista_Mes **last, Nodo_Lista_Mes * Ins);
 
 void * worker();
 
-int worker_Fun(void* filepath);
+void worker_Fun(void* filepath);
 
 int insert_coda_con(char * nomeFile);
 
-Mes * popListMes ();
+Mes * pop_Coda_Mes ();
 
 void * sender(void *);
 

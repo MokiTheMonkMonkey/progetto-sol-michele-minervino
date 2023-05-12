@@ -1,6 +1,4 @@
-
 #include <threadsPool.h>
-#include "./../includes/threadsPool.h"
 
 
 /*
@@ -11,7 +9,7 @@ int insert_coda_con(char * nomeFile){
 
     LOCK(&coda_mutex)
 
-    while(!is_set_coda_cond && coda_concorrente.curr == coda_concorrente.lim && !signExit){
+    while(!is_set_coda_con && coda_concorrente.curr == coda_concorrente.lim && !signExit){
 
         //coda troppo piena aspetto che si svuoti
         WAIT(&coda_cond,&coda_mutex)
@@ -138,7 +136,7 @@ char * pop_Coda_Con(){
 /*
  * inserimento in coda messaggi
  * */
-void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * Ins){
+void insert_Coda_Mes(Nodo_Lista_Mes **lista, Nodo_Lista_Mes **last, Nodo_Lista_Mes  * Ins){
 
     Ins -> next = NULL;
 
@@ -164,6 +162,9 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * I
     if(!strncmp(Ins -> msg -> nome , "quit" , 4)){
 
         end_list = 1;
+        BCAST(&mes_list_cond)
+        UNLOCK(&mes_list_mutex)
+        return;
 
     }
 
@@ -176,18 +177,17 @@ void insertCoda(Nodo_Lista_Mes **lista,Nodo_Lista_Mes **last,Nodo_Lista_Mes  * I
 /*
  * funzione che fa la pop della coda messaggi
  * */
-Mes * popListMes (){
+Mes * pop_Coda_Mes (){
 
     LOCK(&mes_list_mutex)
 
     while (!(Coda_Mes_ptr) && !end_list){
 
-
         WAIT ( &mes_list_cond , &mes_list_mutex )
 
     }
 
-    if(!(Coda_Mes_ptr)){
+    if(!(Coda_Mes_ptr) ){
 
         SIGNAL(&mes_list_cond)
         UNLOCK(&mes_list_mutex)
@@ -239,16 +239,11 @@ Mes * popListMes (){
  * funzione invocata dai threads che fa il calcolo del file
  * e inserisce in coda mesaggi
  * */
-int worker_Fun(void* filepath){
+void worker_Fun(void* filepath){
 
     //dichiaro le variabili
     char * filePath = (char*) filepath;
 
-    if(!strncmp(filePath,"quit",4)){
-
-        return 0;
-
-    }
     FILE * fd = NULL;
     long int i,lBuf,retValue;
 
@@ -257,8 +252,8 @@ int worker_Fun(void* filepath){
     //apro il file
     if((fd = fopen (filePath , "r")) == NULL){
 
-        perror("fopen :");
-        return -1;
+        fprintf(stderr,"ERRORE fopen nel file: %s\n",filePath);
+        return;
 
     }
 
@@ -280,8 +275,8 @@ int worker_Fun(void* filepath){
             exit(err);
 
         }
-        perror ("thread fread :");
-        return -2;
+        fprintf (stderr,"ERRORE thread worker fread nel file:%s\n",filePath);
+        return;
 
     }
 
@@ -306,164 +301,10 @@ int worker_Fun(void* filepath){
     free(filepath);
 
     //inserisco il nodo in lista
-    insertCoda (&Coda_Mes_ptr , &last_Mes_Ptr , nuovo);
+    insert_Coda_Mes(&Coda_Mes_ptr, &last_Mes_Ptr, nuovo);
 
-    return 0;
 
 }
-
-
-
-/*
- * thread dedicato a scirvere messaggi sulla socket
- * */
-void * sender(void * err) {
-
-    int fd_sock ,* e;
-
-    e = err;
-
-    IS_MENO1(fd_sock = socket (AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(-1) )
-
-    struct sockaddr_un sa;
-
-    //imposto il tempo di attesa per riprovare la connect 1 secondo
-    struct timespec wait;
-
-    wait.tv_nsec = 50000000;
-    wait.tv_sec = 0;
-
-    sa.sun_family = AF_UNIX;
-    strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
-    sa.sun_path[SOCK_NAME_LEN] = '\0';
-
-    //provo per 10 volte a connettere
-    int i;
-    for(i = 0; i < 10 ; i++){
-
-        if((errno = 0) , connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
-
-            break;
-
-        }
-
-        if(errno != ENOENT){
-
-            *e = errno;
-            return e;
-
-        } else{
-
-            if((errno = 0),nanosleep(&wait, NULL) == -1){
-
-                *e= errno;
-                perror("nanosleep del sender :");
-                return e;
-
-            }
-
-        }
-
-    }
-    if(i==10){
-
-        fprintf(stderr,"connect fallita\n");
-        exit(EXIT_FAILURE);
-
-    }
-
-
-    Mes * to_send = NULL;
-    size_t w_bites  =0;
-    int checkPrint;
-    while(1){
-
-        checkPrint = printM;
-
-        if(!checkPrint) {
-
-
-            to_send = popListMes();
-
-            if (to_send) {
-
-
-                w_bites = strnlen(to_send->nome, MAX_NAME) + 1;
-
-                if (writen(fd_sock, &w_bites, sizeof(size_t)) == -1) {
-
-                    *e = -1;
-                    perror("srittura numero bytes :");
-                    return e;
-
-                }
-
-                if (writen(fd_sock, to_send->nome, w_bites) == -1) {
-
-                    *e = -1;
-                    perror("scrittura messaggio :");
-                    return e;
-
-                }
-                if (writen(fd_sock, &(to_send->val), sizeof(long int)) == -1) {
-
-                    *e = -1;
-                    perror("scrittura valore :");
-                    return e;
-
-                }
-
-                free(to_send->nome);
-                free(to_send);
-
-            } else {
-
-
-                w_bites = -2;
-                if (writen(fd_sock, &w_bites, sizeof(size_t)) == -1) {
-
-                    *e = -1;
-                    perror("write quit :");
-                    return e;
-
-                }
-
-
-                if ((errno = 0), close(fd_sock) == -1) {
-
-                    *e = errno;
-                    perror("socket close ");
-                    return e;
-
-                }
-
-                return NULL;
-
-
-            }
-
-        }
-        else{
-
-            printM = 0;
-
-            w_bites =-3;
-
-            if(writen(fd_sock,&w_bites,sizeof(size_t)) == -1){
-
-                perror("write print request ");
-                return e;
-
-            }
-
-
-        }
-
-
-    }
-
-}
-
 
 /*
  * funzione worker che prende dalla coda concorrente e chiama la workerFun
@@ -477,6 +318,8 @@ void * worker(){
     while(1) {
 
         if (((nomeFile = pop_Coda_Con ()) && !strncmp ( nomeFile , "quit" , 4)) ) {
+
+
 
             LOCK(&ter_mes_mutex)
 
@@ -517,7 +360,7 @@ void * worker(){
                 strncpy (ultimo -> msg -> nome , "quit" , 5);
                 ultimo -> msg -> val = MAXLONG;
 
-                insertCoda (&Coda_Mes_ptr , &last_Mes_Ptr , ultimo );
+                insert_Coda_Mes(&Coda_Mes_ptr, &last_Mes_Ptr, ultimo);
 
                 return NULL;
 
@@ -527,12 +370,128 @@ void * worker(){
 
         }
 
-
-
         worker_Fun(nomeFile);
-
 
     }
 
+
+}
+
+/*
+ * thread dedicato a scirvere messaggi sulla socket
+ * */
+void * sender(void * err) {
+
+    int fd_sock ,e;
+
+    IS_MENO1(fd_sock = socket (AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket:" , exit(EXIT_FAILURE))
+
+    struct sockaddr_un sa;
+
+    //imposto il tempo di attesa per riprovare la connect 1 secondo
+    struct timespec wait;
+
+    wait.tv_nsec = 50000000;
+    wait.tv_sec = 0;
+
+    sa.sun_family = AF_UNIX;
+    strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
+    sa.sun_path[SOCK_NAME_LEN] = '\0';
+
+    //provo per 10 volte a connettere
+    int i;
+    for(i = 0; i < 10 ; i++){
+
+        if((errno = 0) , connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
+
+            break;
+
+        }
+
+        if(errno != ENOENT){
+
+            e = errno;
+            perror("connect ");
+            exit(e);
+
+        } else{
+
+            if((errno = 0),nanosleep(&wait, NULL) == -1){
+
+                e= errno;
+                perror("nanosleep del sender :");
+                exit(e);
+
+            }
+
+        }
+
+    }
+    if(i==10){
+
+        fprintf(stderr,"connect fallita\n");
+        exit(EXIT_FAILURE);
+
+    }
+
+
+    Mes * to_send = NULL;
+    size_t w_bites  =0;
+    int checkPrint;
+    while(1){
+
+        checkPrint = printM;
+
+        if(!checkPrint) {
+
+            to_send = pop_Coda_Mes();
+            if (to_send) {
+
+                w_bites = strnlen(to_send->nome, MAX_NAME) + 1;
+
+
+                IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)),"srittura numero bytes :", exit(EXIT_FAILURE))
+
+
+                IS_MENO1(write_n(fd_sock, to_send->nome, w_bites),"scrittura messaggio :", exit(EXIT_FAILURE))
+
+
+                IS_MENO1(write_n(fd_sock, &(to_send->val), sizeof(long int)),"scrittura valore :", exit(EXIT_FAILURE))
+
+
+                free(to_send->nome);
+                free(to_send);
+
+            } else {
+
+                w_bites = -2;
+
+                IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)),"write quit :", exit(EXIT_FAILURE))
+
+                if ((errno = 0), close(fd_sock) == -1) {
+
+                    perror("socket close ");
+                    exit(EXIT_FAILURE);
+
+                }
+
+                return NULL;
+
+
+            }
+
+        }
+        else{
+
+            printM = 0;
+
+            w_bites =-3;
+
+            IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)) , "write print request ", exit(EXIT_FAILURE))
+
+
+        }
+
+    }
 
 }

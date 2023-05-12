@@ -34,31 +34,34 @@
         fprintf(stderr,"        -t : permette di specificare il delay (maggiore o uguale a zero) tra le richieste ai threads\n"); \
 }
 #define MU_ZERO(s,m) \
- if ( (s) <= 0 ) {perror(m); \
+ if ( (s) <= 0 ) {fprintf(stderr,m); \
  tutorial()   \
  exit(EXIT_FAILURE); \
  }
 
 #define IS_MENO1(s,m,c) \
- if((s)==-1) {perror(m); c;}
+    if((s)==-1) {          \
+    perror(m);             \
+    c;                     \
+ }
 #define LOCK(l)      if (pthread_mutex_lock(l)!=0)        { \
-    fprintf(stderr, "ERRORE FATALE lock\n");		    \
+    fprintf(stderr, "Errore lock\n");		    \
     pthread_exit((void*)EXIT_FAILURE);			    \
   }
 #define UNLOCK(l)    if (pthread_mutex_unlock(l)!=0)      { \
-  fprintf(stderr, "ERRORE FATALE unlock\n");		    \
+  fprintf(stderr, "Errore unlock\n");		    \
   pthread_exit((void*)EXIT_FAILURE);				    \
   }
 #define WAIT(c,l)    if (pthread_cond_wait(c,l)!=0)       { \
-    fprintf(stderr, "ERRORE FATALE wait\n");		    \
+    fprintf(stderr, "Errore wait\n");		    \
     pthread_exit((void*)EXIT_FAILURE);				    \
 }
 #define SIGNAL(c)    if (pthread_cond_signal(c)!=0)       {	\
-    fprintf(stderr, "ERRORE FATALE signal\n");			\
+    fprintf(stderr, "Errore signal\n");			\
     pthread_exit((void*)EXIT_FAILURE);					\
   }
 #define BCAST(c)     if (pthread_cond_broadcast(c)!=0)    {		\
-    fprintf(stderr, "ERRORE FATALE broadcast\n");			\
+    fprintf(stderr, "Errore broadcast\n");			\
     pthread_exit((void*)EXIT_FAILURE);						\
   }
 #define ISSET_CODA(s,m) \
@@ -76,14 +79,14 @@ typedef struct mes {
 }Mes;
 
 
-char * valid_name(char * dirname , char * next);
+char * valid_name (char * dirname , char * next);
 
 void* s_malloc (unsigned long size);
 
-long isNumber(const char* s);
+long isNumber (const char* s);
 
-size_t readn(long fd, void *buf, size_t size);
+size_t read_n (long fd, void *buf, size_t size);
 
-size_t writen(int fd, void *buf, size_t size);
+size_t write_n (int fd, void *buf, size_t size);
 
 #endif

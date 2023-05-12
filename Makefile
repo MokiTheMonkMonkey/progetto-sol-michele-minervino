@@ -4,7 +4,7 @@ INCLUDES	= -I ./includes
 TARGETS		= farm
 OBJS        = ./source/main.o ./source/utils.o ./source/ThreadsPool.o ./source/collector.o ./source/masterWorker.o
 
-.PHONY: all clear cleanExe test testSig testClean testAll
+.PHONY: all clearAll clear clearExe test
 .SUFFIXES: .c .h
 
 %.o: %.c
@@ -13,14 +13,8 @@ OBJS        = ./source/main.o ./source/utils.o ./source/ThreadsPool.o ./source/c
 all: $(TARGETS)
 
 
-
-testAll: 	test testSig
-
-test: 		generafile
+test: 		generafile farm
 	./test.sh
-
-testSig:	generafile
-	./testSigUsr.sh
 
 generafile: ./source/generafile.c
 	gcc -std=c99 -o $@ $^
@@ -40,13 +34,13 @@ farm : $(OBJS)
 
 ./source/utils.o : ./source/utils.c
 
-cleanAll: clear cleanExe
+clearAll: clear cleanExe
 
 clear :
 	-rm ./source/*.o
 	-rm *.sck
 
-cleanExe :
+clearExe :
 	\rm -f *.dat
 	\rm -r testdir
 	\rm -f generafile
